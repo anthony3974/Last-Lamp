@@ -48,7 +48,6 @@ Nothing yet. The owner sets the first task.
 
 ### Working in this project
 - Each bug fix gets its own commit, so the history shows it as a fix.
-- Do not launch a second editor on this project; the owner keeps it open.
 
 ### Releasing
 - Change only Project Settings > Player > Version. The Android version code is set from it on every Android build. This needs `Assets/Editor/AndroidVersionCode.cs` from Farming-Simulator-94, which is not in this project yet.
