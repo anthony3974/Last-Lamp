@@ -31,7 +31,14 @@ Unity locks the project while the editor is open, so change Project Settings thr
 
 Playtest result (owner, 2026-11-09): all good, and two monsters was the step the corridor needed.
 
+### Realistic monster (the Wick)
+The design model is approved and kept in `Art/Wick`, outside `Assets` so Unity doesn't import it yet: `wick.blend`, `wick.py` (the Blender script that builds it) and `wick_design_sheet.png`. `Assets/Scenes/MonsterStage_01` is the room for trying it in, with a `Monster Spot` to put it under. Delete `Assets/Editor/MonsterStageBuilder.cs` once that scene is confirmed.
+
+- [ ] **13. Make the Wick game-ready.** It is a design model now: about 190,000 triangles, with no UVs, baked textures or rig. Build a lower-poly mesh, bake the skin and char into textures for URP, and rig it for walk, chase, grab and stun. Keep the seam and spine glands as one separate mesh using `Monster_Alert`, so `Enemy` can colour it through its `Alert Light` reference. Optional: a better face, the weakest part up close. *Check: under `Monster Spot` in `MonsterStage_01`, it reads as the design sheet does in lamp light and by flashlight, and the seam changes colour with each state.*
+- [ ] **14. Put the Wick in the game.** Replace the capsule on the corridor monsters. Its arms span about 1.05 m against the agent's 0.9 m, and its head reaches 0.65 m forward of the agent's centre, so pull the arms in or widen the agent. *Check: it patrols and chases the corridor with no visible clipping through walls.*
+
 ### Decisions
+- **The Wick (owner, 2026-11-09).** The realistic monster is a starved, hunched creature burned by light: wet ashen skin, with hands, forearms and feet charred black. It is 1.95 m tall with its eyes at 1.7 m, matching the height `Enemy` sees from. Its long arms hang almost to the shins to suit the 1.4 m catch reach. A glowing seam down the breastbone and glands down the spine replace the sphere above the head as the warning cue, so it reads from the front and the back.
 - **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
 - **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
 - **Lit pools are a NavMesh area (2026-11-09).** With two monsters, the carving NavMesh Obstacle from task 9 would open a pool for every monster at once. Each pool is now a `Lit` area in the baked NavMesh, and each monster allows or forbids that area for itself. A lamp that goes out will need a NavMesh rebake to open its pool.
