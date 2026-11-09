@@ -14,13 +14,10 @@ namespace LastLamp
         [SerializeField] float fallRate = 2.5f;
         [Tooltip("How fast the spike from landing fades, per second.")]
         [SerializeField] float landingFadeRate = 1f;
-        [Tooltip("Seconds in the air before touching down counts as a landing.")]
-        [SerializeField] float minAirTime = 0.15f;
 
         PlayerController player;
         float movementExposure;
         float landingExposure;
-        float airTime;
 
         public float Value => Mathf.Max(movementExposure, landingExposure);
         public bool IsInLamp { get; private set; }
@@ -29,6 +26,9 @@ namespace LastLamp
         {
             player = GetComponent<PlayerController>();
         }
+
+        void OnEnable() => player.Landed += OnLanded;
+        void OnDisable() => player.Landed -= OnLanded;
 
         void Update()
         {
@@ -39,20 +39,11 @@ namespace LastLamp
             movementExposure = Mathf.MoveTowards(movementExposure, target, rate * Time.deltaTime);
 
             landingExposure = IsInLamp ? 0f : Mathf.MoveTowards(landingExposure, 0f, landingFadeRate * Time.deltaTime);
-            TrackLanding();
         }
 
-        void TrackLanding()
+        void OnLanded()
         {
-            if (player.IsAirborne)
-            {
-                airTime += Time.deltaTime;
-                return;
-            }
-
-            if (airTime >= minAirTime)
-                landingExposure = Mathf.Max(landingExposure, VisibilityRules.Landing(IsInLamp, player.IsCrouching));
-            airTime = 0f;
+            landingExposure = Mathf.Max(landingExposure, VisibilityRules.Landing(IsInLamp, player.IsCrouching));
         }
     }
 }

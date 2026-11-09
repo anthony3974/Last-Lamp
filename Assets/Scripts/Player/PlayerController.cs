@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,6 +28,8 @@ namespace LastLamp
         [Header("Jump")]
         [SerializeField] float jumpHeight = 1f;
         [SerializeField] float gravity = 20f;
+        [Tooltip("Seconds in the air before touching down counts as a landing.")]
+        [SerializeField] float minAirTime = 0.15f;
 
         [Header("Height (metres)")]
         [SerializeField] float standHeight = 1.8f;
@@ -55,10 +58,15 @@ namespace LastLamp
         float yaw;
         float pitch;
         bool isCrouching;
+        bool isSprinting;
+        float airTime;
+
+        public event Action Landed;
 
         public float HorizontalSpeed => horizontalVelocity.magnitude;
         public float SprintSpeed => sprintSpeed;
         public bool IsCrouching => isCrouching;
+        public bool IsSprinting => isSprinting;
         public bool IsAirborne => !controller.isGrounded;
 
         void Awake()
@@ -135,7 +143,8 @@ namespace LastLamp
             Vector3 wish = Quaternion.Euler(0f, yaw, 0f) * new Vector3(input.x, 0f, input.y);
             wish = Vector3.ClampMagnitude(wish, 1f);
 
-            float speed = isCrouching ? crouchSpeed : sprint.IsPressed() ? sprintSpeed : walkSpeed;
+            isSprinting = !isCrouching && sprint.IsPressed();
+            float speed = isCrouching ? crouchSpeed : isSprinting ? sprintSpeed : walkSpeed;
             horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, wish * speed, acceleration * Time.deltaTime);
 
             if (controller.isGrounded)
@@ -146,12 +155,25 @@ namespace LastLamp
             verticalVelocity -= gravity * Time.deltaTime;
 
             controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
+            TrackLanding();
 
             if (wish.sqrMagnitude > 0.01f)
             {
                 var facing = Quaternion.LookRotation(wish);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * Time.deltaTime);
             }
+        }
+
+        void TrackLanding()
+        {
+            if (!controller.isGrounded)
+            {
+                airTime += Time.deltaTime;
+                return;
+            }
+
+            if (airTime >= minAirTime) Landed?.Invoke();
+            airTime = 0f;
         }
     }
 }
