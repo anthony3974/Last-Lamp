@@ -14,7 +14,7 @@ namespace LastLamp
 
         const float ArriveMargin = 0.3f;
         const float NewDestinationDistance = 0.3f;
-        const float ChaseRepathSeconds = 0.25f;
+        const string LitArea = "Lit";
 
         [Header("References")]
         [SerializeField] PlayerController player;
@@ -68,7 +68,7 @@ namespace LastLamp
         bool heardNoise;
         Vector3 noisePosition;
         Vector3 searchPoint;
-        float nextChaseRepath;
+        int litAreaMask;
         int routeIndex;
         int routeDirection = 1;
 
@@ -79,6 +79,7 @@ namespace LastLamp
             agent = GetComponent<NavMeshAgent>();
             voice = GetComponent<AudioSource>();
             alertBlock = new MaterialPropertyBlock();
+            litAreaMask = 1 << NavMesh.GetAreaFromName(LitArea);
         }
 
         void OnEnable()
@@ -127,6 +128,7 @@ namespace LastLamp
 
             if (brain.State != before) OnStateChanged(before);
             if (brain.CaughtPlayer) lives.Catch();
+            UpdateLightAccess();
             Act();
         }
 
@@ -176,7 +178,6 @@ namespace LastLamp
         {
             hasDestination = false;
             searchPoint = brain.LastKnownPosition;
-            LampZone.SetOpenToEnemies(brain.IsHunting);
             ShowAlertColour();
 
             // Going back to a chase after a missed grab or a stun isn't a new sighting, so it stays quiet.
@@ -201,7 +202,6 @@ namespace LastLamp
                     MoveTo(brain.LastKnownPosition, investigateSpeed);
                     break;
                 case EnemyState.Chase:
-                    RepathDuringChase();
                     MoveTo(brain.LastKnownPosition, chaseSpeed);
                     break;
                 case EnemyState.Search:
@@ -217,12 +217,13 @@ namespace LastLamp
             }
         }
 
-        // Lit pools only open a moment after a chase starts, so a path planned to the edge of one has to be replaced.
-        void RepathDuringChase()
+        // Only an enemy that is hunting may enter light. One already standing in light may stay on it, so it can walk out.
+        void UpdateLightAccess()
         {
-            if (Time.time < nextChaseRepath) return;
-            hasDestination = false;
-            nextChaseRepath = Time.time + ChaseRepathSeconds;
+            bool standingInLight = NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 0.5f, NavMesh.AllAreas)
+                && (hit.mask & litAreaMask) != 0;
+
+            agent.areaMask = brain.IsHunting || standingInLight ? NavMesh.AllAreas : NavMesh.AllAreas & ~litAreaMask;
         }
 
         void SearchArea()

@@ -14,12 +14,12 @@ Working so far:
 - Third-person player: walk, sprint, crouch and jump, with a camera that stays out of walls.
 - Lamp pools that are safe unless a monster is already chasing you, and an on-screen bar showing how exposed you are in the dark.
 - Footsteps, landings and kickable cans that make noise enemies can hear.
-- One monster that patrols, sees, hears, warns, investigates, chases and searches, and only enters lamp light when it is already chasing you.
-- A hiding spot that ends a chase if the monster doesn't see you get in.
+- Two monsters that patrol, see, hear, warn, investigate, chase and search, and only enter lamp light when already chasing you.
+- Two hiding spots that end a chase if the monster doesn't see you get in.
 - A dim flashlight that points where you look.
 - Getting caught: lives, checkpoints, one punch and one dodge.
 
-Not built yet: an end point and restart. See [PLAN.md](PLAN.md) for what's next.
+The level ends at a marker in the far yard, where you can restart. See [PLAN.md](PLAN.md) for what's next.
 
 ## Controls
 
@@ -30,7 +30,7 @@ Not built yet: an end point and restart. See [PLAN.md](PLAN.md) for what's next.
 | Sprint | Q |
 | Crouch (hold) | Left Shift |
 | Jump | Space |
-| Hide / leave hiding spot | E |
+| Hide, leave hiding spot, restart | E |
 | Punch | Left mouse |
 | Dodge | Right mouse |
 

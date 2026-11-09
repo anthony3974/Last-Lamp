@@ -1,34 +1,24 @@
 using System.Collections.Generic;
+using Unity.AI.Navigation;
 using UnityEngine;
-using UnityEngine.AI;
 
 namespace LastLamp
 {
     /// <summary>
     /// Marks the pool under a lamp as safe. Gameplay reads this and never the rendered light.
-    /// Turning the lamp object off removes its safe zone.
+    /// Turning the lamp object off removes its safe zone, but the Lit area in the baked NavMesh stays until a rebake.
     /// </summary>
     public class LampZone : MonoBehaviour
     {
+        const float EnemyBodyRadius = 0.45f;
+
         static readonly List<LampZone> Active = new List<LampZone>();
 
-        [Tooltip("Safe distance from the lamp along the ground, in metres.")]
+        [Tooltip("Safe distance from the lamp along the ground, in metres. Rebake the NavMesh after changing it.")]
         [SerializeField] float radius = 2.6f;
 
-        NavMeshObstacle obstacle;
-
-        void Awake() => obstacle = GetComponent<NavMeshObstacle>();
         void OnEnable() => Active.Add(this);
         void OnDisable() => Active.Remove(this);
-
-        /// <summary>Opens or closes every lit pool to enemies, for all of them at once.</summary>
-        public static void SetOpenToEnemies(bool open)
-        {
-            foreach (var zone in Active)
-            {
-                if (zone.obstacle != null) zone.obstacle.enabled = !open;
-            }
-        }
 
         public static bool AnyContains(Vector3 point)
         {
@@ -46,11 +36,14 @@ namespace LastLamp
             return x * x + z * z <= radius * radius;
         }
 
-        // Keeps the area enemies cannot enter the same size as the safe zone.
+        // Keeps the Lit area enemies avoid big enough that their bodies stay out of the safe zone.
         void OnValidate()
         {
-            var obstacle = GetComponent<NavMeshObstacle>();
-            if (obstacle != null) obstacle.radius = radius;
+            var volume = GetComponent<NavMeshModifierVolume>();
+            if (volume == null) return;
+
+            float width = (radius + EnemyBodyRadius) * 2f;
+            volume.size = new Vector3(width, volume.size.y, width);
         }
 
         void OnDrawGizmosSelected()
