@@ -22,16 +22,16 @@ Unity locks the project while the editor is open, so change Project Settings thr
 
 ### Core loop in graybox
 - [ ] **6. Player.** Third-person walk, crouch and sprint with a Cinemachine follow camera. Keyboard and mouse, plus gamepad. *Check: the corridor can be walked end to end with both.*
-- [ ] **7. Light zones and the visibility cue.** Each lamp has a trigger volume that marks its pool. Gameplay reads these volumes and never the rendered light, so tuning the look can't change the rules. Combine zone, crouch and movement into one 0 to 1 visibility value, and show it on screen. Needs Decision A. *Check: the cue changes clearly when entering a pool, crouching and running.*
+- [ ] **7. Light zones and the visibility cue.** Each lamp has a trigger volume that marks its pool. Gameplay reads these volumes and never the rendered light, so tuning the look can't change the rules. Visibility is one 0 to 1 value, shown on screen. Inside a pool it is 0. In the dark, moving raises it and crouching lowers it. *Check: the cue changes clearly when entering a pool, crouching and running.*
 - [ ] **8. Noise.** Footsteps (loudest when sprinting, silent when crouched) and knocked-over objects emit a noise event with a position and radius. Add placeholder footstep audio. *Check: a debug gizmo shows the radius for each noise.*
-- [ ] **9. One enemy.** NavMesh patrol, vision cone blocked by `VisionBlocker`, and hearing from task 8. States: Patrol, Suspicious (the warning beat), Investigate, Chase, Search, back to Patrol. Keep the detection maths in plain C# so it can be tested. *Check: edit mode tests prove detection can never go from unseen to fully spotted without passing through Suspicious, and the enemy gives a visible and audible warning in play.*
+- [ ] **9. One enemy.** NavMesh patrol, vision cone blocked by `VisionBlocker`, and hearing from task 8. Each lit pool is a carving NavMesh Obstacle, so enemies stay out of it and a lamp going out opens the path. An enemy chasing the player to a pool waits at the edge for a short time, then goes to Search, so the player can't be trapped there forever. States: Patrol, Suspicious (the warning beat), Investigate, Chase, Search, back to Patrol. Keep the detection maths in plain C# so it can be tested. *Check: edit mode tests prove detection can never go from unseen to fully spotted without passing through Suspicious, the enemy gives a visible and audible warning in play, and it stops at the edge of a pool and later gives up.*
 - [ ] **10. Hiding spot.** Interact to enter and leave. Entering unseen ends a chase and the enemy goes to Search. *Check: a chase can be escaped by hiding, and hiding in full view of the enemy does not work.*
 - [ ] **11. Getting caught.** Being caught costs something and returns the player to a checkpoint, with no scripted capture anywhere. Add one punch and one dodge against the one enemy type. *Check: caught, fought and escaped outcomes all play out without getting stuck.*
 - [ ] **12. Finish the corridor and playtest.** Add an end point and restart. Lay out lamps, one enemy route and two hiding spots. *Check: in a PC build, the corridor can be crossed without being spotted, and each Design Goal below has been tried and noted as working or not.*
 
-### Decisions needed
-- **Decision A (before task 7): what does light do?** The idea below says pools of light are safe and the dark is risky, which is the reverse of most stealth games, where darkness hides you. It also says enemies react to light, and asks for a cue for how visible the player is, and those two need defining under this rule. Recommended, because it keeps the owner's rule and fits the title: the enemies are creatures of the dark and won't enter a lit pool, so lamps are true safety, and visibility measures how exposed the player is in the dark from movement, noise and distance.
-- **Assumed: third-person camera.** Taken from the Arkham-style combat goal. Changing it affects tasks 4 and 6.
+### Decisions
+- **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
+- **Third-person camera behind the player (owner, 2026-11-08).** The player can see their own shadow and nearby enemies, and it suits Arkham-style combat later.
 - **PC first (owner, 2026-11-08).** Mobile is secondary and may never ship. If it comes back, it needs touch controls and a new lighting pass, because the Mobile profile has lamp shadows off. Baking the lamps is the likely fix, but baked lamps can't go out and characters don't throw shadows from them.
 
 ### Not in this list
@@ -55,7 +55,7 @@ Menus, saving, final art, bosses, the calmer stealth path, dodge-and-counter com
 
 **Mechanics:**
 - Pools of light are safe zones, dark stretches are risky.
-- Enemies react to light and sound, with simple vision and hearing.
+- Enemies fear light and won't enter it. They hunt the dark with simple vision and hearing.
 - Combat starts tiny: one punch, one dodge, one enemy type. It can grow into an Arkham-style dodge and counter later.
 
 **Why it's feasible:**
