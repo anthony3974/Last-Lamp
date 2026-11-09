@@ -11,6 +11,7 @@ namespace LastLamp
     {
         const float ArriveMargin = 0.3f;
         const float NewDestinationDistance = 0.3f;
+        const float ChaseRepathSeconds = 0.25f;
 
         [Header("References")]
         [SerializeField] PlayerController player;
@@ -56,6 +57,7 @@ namespace LastLamp
         bool heardNoise;
         Vector3 noisePosition;
         Vector3 searchPoint;
+        float nextChaseRepath;
         int routeIndex;
         int routeDirection = 1;
 
@@ -102,7 +104,6 @@ namespace LastLamp
                 Exposure = visibility.Value,
                 DistanceFraction = Vector3.Distance(transform.position, playerPosition) / sightRange,
                 PlayerPosition = playerPosition,
-                PlayerInLamp = visibility.IsInLamp,
                 PlayerHidden = player.IsHidden,
                 HeardNoise = heardNoise,
                 NoisePosition = noisePosition,
@@ -131,6 +132,7 @@ namespace LastLamp
         {
             hasDestination = false;
             searchPoint = brain.LastKnownPosition;
+            LampZone.SetOpenToEnemies(brain.State == EnemyState.Chase);
             ShowAlertColour();
 
             if (brain.State == EnemyState.Suspicious) voice.PlayOneShot(suspiciousSound);
@@ -152,12 +154,21 @@ namespace LastLamp
                     MoveTo(brain.LastKnownPosition, investigateSpeed);
                     break;
                 case EnemyState.Chase:
+                    RepathDuringChase();
                     MoveTo(brain.LastKnownPosition, chaseSpeed);
                     break;
                 case EnemyState.Search:
                     SearchArea();
                     break;
             }
+        }
+
+        // Lit pools only open a moment after a chase starts, so a path planned to the edge of one has to be replaced.
+        void RepathDuringChase()
+        {
+            if (Time.time < nextChaseRepath) return;
+            hasDestination = false;
+            nextChaseRepath = Time.time + ChaseRepathSeconds;
         }
 
         void SearchArea()

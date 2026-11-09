@@ -31,6 +31,7 @@ Unity locks the project while the editor is open, so change Project Settings thr
 
 ### Decisions
 - **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
+- **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
 - **Third-person camera behind the player (owner, 2026-11-08).** The player can see their own shadow and nearby enemies, and it suits Arkham-style combat later.
 - **Corridor layout (owner, 2026-11-08).** 6 m wide with lamps on alternating walls, so an enemy has a dark lane about 2.4 m wide past each pool. With lamps in the middle, a pool would fill the corridor and trap the enemy in one gap.
 - **Flashlight (owner, 2026-11-09).** The player carries a small dim flashlight that points where they look. For now it is only for seeing by: it doesn't change exposure and enemies ignore it.
@@ -57,7 +58,7 @@ Menus, saving, final art, bosses, the calmer stealth path, dodge-and-counter com
 
 **Mechanics:**
 - Pools of light are safe zones, dark stretches are risky.
-- Enemies fear light and won't enter it. They hunt the dark with simple vision and hearing.
+- Enemies fear light and won't enter it unless they are already chasing the player. They hunt the dark with simple vision and hearing.
 - Combat starts tiny: one punch, one dodge, one enemy type. It can grow into an Arkham-style dodge and counter later.
 
 **Why it's feasible:**

@@ -1,6 +1,6 @@
 # Last Lamp
 
-A noir horror stealth game made with Unity. You cross the dark while monsters hunt you. They fear light, so every lamp is a safe place, and every stretch between lamps is a risk.
+A noir horror stealth game made with Unity. You cross the dark while monsters hunt you. They fear light, so every lamp is a safe place until one of them is already chasing you, and every stretch between lamps is a risk.
 
 Sneaking comes first, and combat is only the backup. Stealth should always be a real option: enemies give a warning before they spot you, and you can always see how exposed you are.
 
@@ -12,9 +12,9 @@ Early graybox prototype: one level, built from plain shapes, with a corridor and
 
 Working so far:
 - Third-person player: walk, sprint, crouch and jump, with a camera that stays out of walls.
-- Lamp pools that are always safe, and an on-screen bar showing how exposed you are in the dark.
+- Lamp pools that are safe unless a monster is already chasing you, and an on-screen bar showing how exposed you are in the dark.
 - Footsteps, landings and kickable cans that make noise enemies can hear.
-- One monster that patrols, sees, hears, warns, investigates, chases and searches, and can't enter lamp light.
+- One monster that patrols, sees, hears, warns, investigates, chases and searches, and only enters lamp light when it is already chasing you.
 - A hiding spot that ends a chase if the monster doesn't see you get in.
 - A dim flashlight that points where you look.
 

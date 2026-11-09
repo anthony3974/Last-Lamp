@@ -112,16 +112,15 @@ namespace LastLamp.Tests
         }
 
         [Test]
-        public void EnemyGivesUpAfterWaitingAtALamp()
+        public void AChaseKeepsGoingWhileThePlayerIsInLampLight()
         {
             var brain = BrainInChase();
-            var inLamp = new EnemySenses { SeesPlayer = true, Exposure = 0f, PlayerInLamp = true };
+            var inLamp = new EnemySenses { SeesPlayer = true, Exposure = 0f, PlayerPosition = Vector3.one };
 
-            brain.Tick(inLamp, EnemyBrain.LampEdgeWaitSeconds - 0.5f);
+            for (int i = 0; i < 600; i++) brain.Tick(inLamp, Frame);
+
             Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
-
-            brain.Tick(inLamp, 1f);
-            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+            Assert.That(brain.LastKnownPosition, Is.EqualTo(Vector3.one));
         }
 
         [Test]

@@ -15,8 +15,20 @@ namespace LastLamp
         [Tooltip("Safe distance from the lamp along the ground, in metres.")]
         [SerializeField] float radius = 2.6f;
 
+        NavMeshObstacle obstacle;
+
+        void Awake() => obstacle = GetComponent<NavMeshObstacle>();
         void OnEnable() => Active.Add(this);
         void OnDisable() => Active.Remove(this);
+
+        /// <summary>Opens or closes every lit pool to enemies, for all of them at once.</summary>
+        public static void SetOpenToEnemies(bool open)
+        {
+            foreach (var zone in Active)
+            {
+                if (zone.obstacle != null) zone.obstacle.enabled = !open;
+            }
+        }
 
         public static bool AnyContains(Vector3 point)
         {

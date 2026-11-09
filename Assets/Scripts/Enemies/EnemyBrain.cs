@@ -17,7 +17,6 @@ namespace LastLamp
         public float Exposure;
         public float DistanceFraction;
         public Vector3 PlayerPosition;
-        public bool PlayerInLamp;
         public bool PlayerHidden;
         public bool HeardNoise;
         public Vector3 NoisePosition;
@@ -30,14 +29,12 @@ namespace LastLamp
     internal sealed class EnemyBrain
     {
         public const float SuspiciousSeconds = 1.2f;
-        public const float LampEdgeWaitSeconds = 3f;
         public const float LoseSightSeconds = 2.5f;
         public const float SearchSeconds = 4f;
         public const float HiddenSearchSeconds = 10f;
 
         readonly DetectionMeter meter = new DetectionMeter();
         float secondsInState;
-        float secondsPlayerInLamp;
         float secondsOutOfSight;
         float searchDuration = SearchSeconds;
         bool playerWasHidden;
@@ -107,11 +104,10 @@ namespace LastLamp
 
         void TickChase(in EnemySenses senses, float deltaTime)
         {
-            secondsPlayerInLamp = senses.PlayerInLamp ? secondsPlayerInLamp + deltaTime : 0f;
             secondsOutOfSight = senses.SeesPlayer ? 0f : secondsOutOfSight + deltaTime;
 
             bool reachedWhereItLostThem = senses.PlayerHidden && !senses.SeesPlayer && senses.Arrived;
-            if (reachedWhereItLostThem || secondsPlayerInLamp >= LampEdgeWaitSeconds || secondsOutOfSight >= LoseSightSeconds)
+            if (reachedWhereItLostThem || secondsOutOfSight >= LoseSightSeconds)
             {
                 meter.Reset();
                 Enter(EnemyState.Search);
@@ -133,7 +129,6 @@ namespace LastLamp
         {
             State = next;
             secondsInState = 0f;
-            secondsPlayerInLamp = 0f;
             secondsOutOfSight = 0f;
             searchDuration = playerWasHidden ? HiddenSearchSeconds : SearchSeconds;
         }
