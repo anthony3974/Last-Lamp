@@ -33,6 +33,10 @@ namespace LastLamp
         [SerializeField] float chaseSpeed = 4.8f;
         [SerializeField] float searchSpeed = 2.2f;
 
+        [Header("Search")]
+        [Tooltip("How far from where it lost the player the enemy looks around, in metres.")]
+        [SerializeField] float searchRadius = 4f;
+
         [Header("Alert Light")]
         [ColorUsage(false, true)] [SerializeField] Color patrolColour = new Color(0.3f, 0.3f, 0.3f);
         [ColorUsage(false, true)] [SerializeField] Color suspiciousColour = new Color(5f, 3.5f, 0f);
@@ -51,6 +55,7 @@ namespace LastLamp
         bool hasDestination;
         bool heardNoise;
         Vector3 noisePosition;
+        Vector3 searchPoint;
         int routeIndex;
         int routeDirection = 1;
 
@@ -98,6 +103,7 @@ namespace LastLamp
                 DistanceFraction = Vector3.Distance(transform.position, playerPosition) / sightRange,
                 PlayerPosition = playerPosition,
                 PlayerInLamp = visibility.IsInLamp,
+                PlayerHidden = player.IsHidden,
                 HeardNoise = heardNoise,
                 NoisePosition = noisePosition,
                 Arrived = HasArrived(),
@@ -124,6 +130,7 @@ namespace LastLamp
         void OnStateChanged()
         {
             hasDestination = false;
+            searchPoint = brain.LastKnownPosition;
             ShowAlertColour();
 
             if (brain.State == EnemyState.Suspicious) voice.PlayOneShot(suspiciousSound);
@@ -148,9 +155,22 @@ namespace LastLamp
                     MoveTo(brain.LastKnownPosition, chaseSpeed);
                     break;
                 case EnemyState.Search:
-                    MoveTo(brain.LastKnownPosition, searchSpeed);
+                    SearchArea();
                     break;
             }
+        }
+
+        void SearchArea()
+        {
+            if (HasArrived()) PickSearchPoint();
+            MoveTo(searchPoint, searchSpeed);
+        }
+
+        void PickSearchPoint()
+        {
+            Vector2 offset = Random.insideUnitCircle * searchRadius;
+            Vector3 candidate = brain.LastKnownPosition + new Vector3(offset.x, 0f, offset.y);
+            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, searchRadius, agent.areaMask)) searchPoint = hit.position;
         }
 
         void FollowRoute()

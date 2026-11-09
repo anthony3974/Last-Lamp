@@ -32,6 +32,14 @@ namespace LastLamp
 
         void Update()
         {
+            if (player.IsHidden)
+            {
+                IsInLamp = false;
+                movementExposure = 0f;
+                landingExposure = 0f;
+                return;
+            }
+
             IsInLamp = LampZone.AnyContains(transform.position);
 
             float target = VisibilityRules.Target(IsInLamp, player.HorizontalSpeed, player.SprintSpeed, player.IsCrouching);

@@ -51,6 +51,7 @@ namespace LastLamp
         InputAction jump;
         InputAction sprint;
         InputAction crouch;
+        InputAction interact;
 
         Vector3 horizontalVelocity;
         float verticalVelocity;
@@ -68,6 +69,10 @@ namespace LastLamp
         public bool IsCrouching => isCrouching;
         public bool IsSprinting => isSprinting;
         public bool IsAirborne => !controller.isGrounded;
+        public bool IsHidden { get; private set; }
+
+        // The Interact action has a Hold interaction, but going into hiding has to be instant.
+        public bool InteractPressed => interact.WasPressedThisFrame();
 
         void Awake()
         {
@@ -78,6 +83,7 @@ namespace LastLamp
             jump = map.FindAction("Jump", true);
             sprint = map.FindAction("Sprint", true);
             crouch = map.FindAction("Crouch", true);
+            interact = map.FindAction("Interact", true);
 
             currentHeight = standHeight;
             yaw = transform.eulerAngles.y;
@@ -99,9 +105,31 @@ namespace LastLamp
         void Update()
         {
             UpdateLook();
-            UpdateHeight();
-            UpdateMovement();
+            if (!IsHidden)
+            {
+                UpdateHeight();
+                UpdateMovement();
+            }
             cameraTarget.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        }
+
+        /// <summary>Moves the player out of the world to the given position. They can still look around.</summary>
+        public void EnterHiding(Vector3 position)
+        {
+            IsHidden = true;
+            horizontalVelocity = Vector3.zero;
+            verticalVelocity = 0f;
+            controller.enabled = false;
+            body.gameObject.SetActive(false);
+            transform.position = position;
+        }
+
+        public void LeaveHiding(Vector3 position)
+        {
+            IsHidden = false;
+            transform.position = position;
+            body.gameObject.SetActive(true);
+            controller.enabled = true;
         }
 
         void UpdateLook()

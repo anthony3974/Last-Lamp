@@ -18,6 +18,7 @@ namespace LastLamp
         public float DistanceFraction;
         public Vector3 PlayerPosition;
         public bool PlayerInLamp;
+        public bool PlayerHidden;
         public bool HeardNoise;
         public Vector3 NoisePosition;
         public bool Arrived;
@@ -32,17 +33,23 @@ namespace LastLamp
         public const float LampEdgeWaitSeconds = 3f;
         public const float LoseSightSeconds = 2.5f;
         public const float SearchSeconds = 4f;
+        public const float HiddenSearchSeconds = 10f;
 
         readonly DetectionMeter meter = new DetectionMeter();
         float secondsInState;
         float secondsPlayerInLamp;
         float secondsOutOfSight;
+        float searchDuration = SearchSeconds;
+        bool playerWasHidden;
+        bool sawPlayerLastTick;
+        bool watchedPlayerHide;
 
         public EnemyState State { get; private set; } = EnemyState.Patrol;
         public Vector3 LastKnownPosition { get; private set; }
 
-        public void Tick(in EnemySenses senses, float deltaTime)
+        public void Tick(in EnemySenses rawSenses, float deltaTime)
         {
+            EnemySenses senses = ApplyHiding(rawSenses);
             meter.Tick(senses.SeesPlayer, senses.Exposure, senses.DistanceFraction, deltaTime);
             RememberPosition(senses);
             secondsInState += deltaTime;
@@ -55,6 +62,24 @@ namespace LastLamp
                 case EnemyState.Chase: TickChase(senses, deltaTime); break;
                 case EnemyState.Search: TickSearch(senses); break;
             }
+        }
+
+        // A hidden player can't be seen, unless this enemy had already noticed them and was looking as they hid.
+        // An enemy that watched them hide keeps treating them as in plain sight.
+        EnemySenses ApplyHiding(EnemySenses senses)
+        {
+            if (senses.PlayerHidden && !playerWasHidden)
+                watchedPlayerHide = sawPlayerLastTick && meter.Stage != DetectionStage.Unaware;
+            playerWasHidden = senses.PlayerHidden;
+
+            if (senses.PlayerHidden)
+            {
+                senses.SeesPlayer = watchedPlayerHide;
+                senses.Exposure = watchedPlayerHide ? 1f : 0f;
+            }
+
+            sawPlayerLastTick = senses.SeesPlayer;
+            return senses;
         }
 
         void RememberPosition(in EnemySenses senses)
@@ -85,7 +110,8 @@ namespace LastLamp
             secondsPlayerInLamp = senses.PlayerInLamp ? secondsPlayerInLamp + deltaTime : 0f;
             secondsOutOfSight = senses.SeesPlayer ? 0f : secondsOutOfSight + deltaTime;
 
-            if (secondsPlayerInLamp >= LampEdgeWaitSeconds || secondsOutOfSight >= LoseSightSeconds)
+            bool reachedWhereItLostThem = senses.PlayerHidden && !senses.SeesPlayer && senses.Arrived;
+            if (reachedWhereItLostThem || secondsPlayerInLamp >= LampEdgeWaitSeconds || secondsOutOfSight >= LoseSightSeconds)
             {
                 meter.Reset();
                 Enter(EnemyState.Search);
@@ -96,7 +122,7 @@ namespace LastLamp
         {
             if (meter.Stage == DetectionStage.Spotted) Enter(EnemyState.Chase);
             else if (meter.Stage == DetectionStage.Suspicious || senses.HeardNoise) Enter(EnemyState.Suspicious);
-            else if (secondsInState >= SearchSeconds)
+            else if (secondsInState >= searchDuration)
             {
                 meter.Reset();
                 Enter(EnemyState.Patrol);
@@ -109,6 +135,7 @@ namespace LastLamp
             secondsInState = 0f;
             secondsPlayerInLamp = 0f;
             secondsOutOfSight = 0f;
+            searchDuration = playerWasHidden ? HiddenSearchSeconds : SearchSeconds;
         }
     }
 }

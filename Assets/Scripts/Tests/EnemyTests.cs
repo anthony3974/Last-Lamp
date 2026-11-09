@@ -156,5 +156,85 @@ namespace LastLamp.Tests
 
             Assert.That(brain.State, Is.EqualTo(EnemyState.Suspicious));
         }
+
+        [Test]
+        public void AfterHidingUnseenTheEnemyKeepsGoingUntilItReachesWhereItLostThePlayer()
+        {
+            var brain = BrainInChase();
+            brain.Tick(new EnemySenses(), Frame);
+
+            brain.Tick(new EnemySenses { PlayerHidden = true }, Frame);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+
+            brain.Tick(new EnemySenses { PlayerHidden = true, Arrived = true }, Frame);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+        }
+
+        [Test]
+        public void SearchLastsLongerAfterThePlayerHides()
+        {
+            var brain = BrainInChase();
+            brain.Tick(new EnemySenses(), Frame);
+            var hidden = new EnemySenses { PlayerHidden = true };
+            brain.Tick(hidden, Frame);
+            brain.Tick(new EnemySenses { PlayerHidden = true, Arrived = true }, Frame);
+
+            brain.Tick(hidden, EnemyBrain.SearchSeconds + 1f);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+
+            brain.Tick(hidden, EnemyBrain.HiddenSearchSeconds);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+        }
+
+        [Test]
+        public void HidingInFullViewDoesNotEndAChase()
+        {
+            var brain = BrainInChase();
+            var hidden = new EnemySenses { PlayerHidden = true, PlayerPosition = Vector3.one };
+
+            for (int i = 0; i < 600; i++) brain.Tick(hidden, Frame);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+            Assert.That(brain.LastKnownPosition, Is.EqualTo(Vector3.one));
+        }
+
+        [Test]
+        public void ASuspiciousEnemyThatWatchesThePlayerHideStillGivesAWarningFirst()
+        {
+            var brain = new EnemyBrain();
+            var seen = SeenInTheDark();
+            for (int i = 0; i < 600 && brain.State != EnemyState.Suspicious; i++) brain.Tick(seen, Frame);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Suspicious));
+
+            var hidden = new EnemySenses { PlayerHidden = true };
+            for (int i = 0; i < 600 && brain.State != EnemyState.Chase; i++) brain.Tick(hidden, Frame);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+        }
+
+        [Test]
+        public void AnEnemyThatHasNotNoticedThePlayerDoesNotSeeThemHide()
+        {
+            var brain = new EnemyBrain();
+            brain.Tick(SeenInTheDark(), Frame);
+            var hidden = new EnemySenses { PlayerHidden = true, SeesPlayer = true, Exposure = 1f };
+
+            for (int i = 0; i < 600; i++) brain.Tick(hidden, Frame);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+        }
+
+        [Test]
+        public void WatchingThePlayerHideIsForgottenOnceTheyComeOut()
+        {
+            var brain = BrainInChase();
+            brain.Tick(new EnemySenses { PlayerHidden = true }, Frame);
+            brain.Tick(new EnemySenses(), Frame);
+
+            brain.Tick(new EnemySenses { PlayerHidden = true }, Frame);
+            brain.Tick(new EnemySenses { PlayerHidden = true, Arrived = true }, Frame);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+        }
     }
 }

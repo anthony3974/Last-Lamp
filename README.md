@@ -15,8 +15,10 @@ Working so far:
 - Lamp pools that are always safe, and an on-screen bar showing how exposed you are in the dark.
 - Footsteps, landings and kickable cans that make noise enemies can hear.
 - One monster that patrols, sees, hears, warns, investigates, chases and searches, and can't enter lamp light.
+- A hiding spot that ends a chase if the monster doesn't see you get in.
+- A dim flashlight that points where you look.
 
-Not built yet: hiding spots, getting caught, and combat. See [PLAN.md](PLAN.md) for what's next.
+Not built yet: getting caught and combat. See [PLAN.md](PLAN.md) for what's next.
 
 ## Controls
 
@@ -27,8 +29,9 @@ Not built yet: hiding spots, getting caught, and combat. See [PLAN.md](PLAN.md) 
 | Sprint | Q |
 | Crouch (hold) | Left Shift |
 | Jump | Space |
+| Hide / leave hiding spot | E |
 
-Interact, Attack and Dodge have keys assigned (E, left mouse and right mouse), but they don't do anything yet. Controller buttons are placeholders and haven't been tested.
+Attack and Dodge have keys assigned (left mouse and right mouse), but they don't do anything yet. Controller buttons are placeholders and haven't been tested.
 
 ## Getting started
 
