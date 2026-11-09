@@ -56,6 +56,11 @@ namespace LastLamp
         float pitch;
         bool isCrouching;
 
+        public float HorizontalSpeed => horizontalVelocity.magnitude;
+        public float SprintSpeed => sprintSpeed;
+        public bool IsCrouching => isCrouching;
+        public bool IsAirborne => !controller.isGrounded;
+
         void Awake()
         {
             controller = GetComponent<CharacterController>();
