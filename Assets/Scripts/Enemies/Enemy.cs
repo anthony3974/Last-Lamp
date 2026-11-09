@@ -32,6 +32,10 @@ namespace LastLamp
         [SerializeField] float eyeHeight = 1.7f;
         [SerializeField] float turnSpeed = 220f;
 
+        [Header("Patrol")]
+        [Tooltip("Seconds the enemy waits at each end of its route.")]
+        [SerializeField] float routeEndPause = 0f;
+
         [Header("Speed (metres per second)")]
         [SerializeField] float patrolSpeed = 1.8f;
         [SerializeField] float investigateSpeed = 2.8f;
@@ -71,6 +75,7 @@ namespace LastLamp
         int litAreaMask;
         int routeIndex;
         int routeDirection = 1;
+        float pauseLeft;
 
         public EnemyState State => brain.State;
 
@@ -177,6 +182,7 @@ namespace LastLamp
         void OnStateChanged(EnemyState previous)
         {
             hasDestination = false;
+            pauseLeft = 0f;
             searchPoint = brain.LastKnownPosition;
             ShowAlertColour();
 
@@ -243,14 +249,21 @@ namespace LastLamp
         {
             if (patrolRoute.Length == 0) return;
 
-            if (HasArrived())
-            {
-                if (routeIndex + routeDirection < 0 || routeIndex + routeDirection >= patrolRoute.Length)
-                    routeDirection = -routeDirection;
-                routeIndex = Mathf.Clamp(routeIndex + routeDirection, 0, patrolRoute.Length - 1);
-            }
+            if (pauseLeft > 0f) pauseLeft -= Time.deltaTime;
+            else if (HasArrived()) AdvanceRoute();
 
-            MoveTo(patrolRoute[routeIndex].position, patrolSpeed);
+            if (pauseLeft > 0f) agent.isStopped = true;
+            else MoveTo(patrolRoute[routeIndex].position, patrolSpeed);
+        }
+
+        void AdvanceRoute()
+        {
+            if (routeIndex + routeDirection < 0 || routeIndex + routeDirection >= patrolRoute.Length)
+            {
+                routeDirection = -routeDirection;
+                pauseLeft = routeEndPause;
+            }
+            routeIndex = Mathf.Clamp(routeIndex + routeDirection, 0, patrolRoute.Length - 1);
         }
 
         void MoveTo(Vector3 destination, float speed)
