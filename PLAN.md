@@ -15,15 +15,15 @@ Unity locks the project while the editor is open, so change Project Settings thr
 - [x] **1. Identity and platform.** Company `Tony3974`, product `Last Lamp`, package `com.Tony3974.LastLamp` (matches Farming-Simulator-94). Build for Linux on this machine; Windows build support is already installed for when the game is shared. *Check: an empty PC build opens and runs.*
 - [x] **2. Clear out the template.** Delete `Assets/TutorialInfo` and `Assets/Readme.asset`. Remove the Visual Scripting, Multiplayer Center and Version Control packages. *Check: no console errors after Unity reloads.*
 - [x] **3. Project structure.** Folders under `Assets`: `Scenes`, `Scripts/{Player,Stealth,Enemies,UI}`, `Scripts/Tests`, `Prefabs`, `Materials`, `Editor`. One `LastLamp` assembly for the game and one `LastLamp.Tests` for edit mode tests. Layers: `Player`, `Enemy`, `VisionBlocker`, `Interactable`. Rename `SampleScene` to `Corridor_01`. *Check: one empty edit mode test passes.*
-- [ ] **4. Input and camera packages.** Add Cinemachine 3. In `InputSystem_Actions`, add `Dodge` and remove `Jump`, `Previous` and `Next`. *Check: all remaining actions have keyboard and gamepad bindings, and the project compiles.*
+- [x] **4. Input and camera packages.** Add Cinemachine 3. In `InputSystem_Actions`, add `Dodge` (right mouse, right bumper) and remove `Previous` and `Next`. Keep `Jump` on Space. On keyboard, `Crouch` is Left Shift and `Sprint` is Q (owner, 2026-11-08). *Check: all remaining actions have keyboard and gamepad bindings, and the project compiles.*
 
 ### Prove the look (the game depends on it, so it comes first)
 - [ ] **5. Noir lighting test.** Build a graybox corridor with six lamps. Use real-time Spot lights with shadows, which the PC profile already supports, so the player and enemies throw shadows and lamps can flicker or go out. Use a volume for black and white, high contrast and vignette. *Check: on PC the shadows are hard and clear, a moving capsule throws a shadow, the pools read clearly, and it holds 60 fps.*
 
 ### Core loop in graybox
-- [ ] **6. Player.** Third-person walk, crouch and sprint with a Cinemachine follow camera. Keyboard and mouse, plus gamepad. *Check: the corridor can be walked end to end with both.*
+- [ ] **6. Player.** Third-person walk, crouch, sprint and jump with a Cinemachine follow camera. Keyboard and mouse, plus gamepad. *Check: the corridor can be walked end to end with both.*
 - [ ] **7. Light zones and the visibility cue.** Each lamp has a trigger volume that marks its pool. Gameplay reads these volumes and never the rendered light, so tuning the look can't change the rules. Visibility is one 0 to 1 value, shown on screen. Inside a pool it is 0. In the dark, moving raises it and crouching lowers it. *Check: the cue changes clearly when entering a pool, crouching and running.*
-- [ ] **8. Noise.** Footsteps (loudest when sprinting, silent when crouched) and knocked-over objects emit a noise event with a position and radius. Add placeholder footstep audio. *Check: a debug gizmo shows the radius for each noise.*
+- [ ] **8. Noise.** Footsteps (loudest when sprinting, silent when crouched), landing from a jump and knocked-over objects emit a noise event with a position and radius. Add placeholder footstep audio. *Check: a debug gizmo shows the radius for each noise.*
 - [ ] **9. One enemy.** NavMesh patrol, vision cone blocked by `VisionBlocker`, and hearing from task 8. Each lit pool is a carving NavMesh Obstacle, so enemies stay out of it and a lamp going out opens the path. An enemy chasing the player to a pool waits at the edge for a short time, then goes to Search, so the player can't be trapped there forever. States: Patrol, Suspicious (the warning beat), Investigate, Chase, Search, back to Patrol. Keep the detection maths in plain C# so it can be tested. *Check: edit mode tests prove detection can never go from unseen to fully spotted without passing through Suspicious, the enemy gives a visible and audible warning in play, and it stops at the edge of a pool and later gives up.*
 - [ ] **10. Hiding spot.** Interact to enter and leave. Entering unseen ends a chase and the enemy goes to Search. *Check: a chase can be escaped by hiding, and hiding in full view of the enemy does not work.*
 - [ ] **11. Getting caught.** Being caught costs something and returns the player to a checkpoint, with no scripted capture anywhere. Add one punch and one dodge against the one enemy type. *Check: caught, fought and escaped outcomes all play out without getting stuck.*
@@ -35,7 +35,7 @@ Unity locks the project while the editor is open, so change Project Settings thr
 - **PC first (owner, 2026-11-08).** Mobile is secondary and may never ship. If it comes back, it needs touch controls and a new lighting pass, because the Mobile profile has lamp shadows off. Baking the lamps is the likely fix, but baked lamps can't go out and characters don't throw shadows from them.
 
 ### Not in this list
-Menus, saving, final art, bosses, the calmer stealth path, dodge-and-counter combat, and anything for mobile. Pick these up after task 12 shows the corridor is fun.
+Menus, saving, final art, bosses, the calmer stealth path, dodge-and-counter combat, the final controller layout (current buttons are a placeholder), and anything for mobile. Pick these up after task 12 shows the corridor is fun.
 
 ## Game idea: Noir horror stealth (working concept)
 
