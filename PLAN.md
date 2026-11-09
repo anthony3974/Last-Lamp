@@ -18,7 +18,7 @@ Unity locks the project while the editor is open, so change Project Settings thr
 - [x] **4. Input and camera packages.** Add Cinemachine 3. In `InputSystem_Actions`, add `Dodge` (right mouse, right bumper) and remove `Previous` and `Next`. Keep `Jump` on Space. On keyboard, `Crouch` is Left Shift and `Sprint` is Q (owner, 2026-11-08). *Check: all remaining actions have keyboard and gamepad bindings, and the project compiles.*
 
 ### Prove the look (the game depends on it, so it comes first)
-- [ ] **5. Noir lighting test.** Build a graybox corridor with six lamps. Use real-time Spot lights with shadows, which the PC profile already supports, so the player and enemies throw shadows and lamps can flicker or go out. Use a volume for black and white, high contrast and vignette. *Check: on PC the shadows are hard and clear, a moving capsule throws a shadow, the pools read clearly, and it holds 60 fps.*
+- [x] **5. Noir lighting test.** Build a graybox corridor with six lamps. Use real-time Spot lights with shadows, which the PC profile already supports, so the player and enemies throw shadows and lamps can flicker or go out. Use a volume for muted color (Saturation -45, so the brown crates still show), high contrast and vignette. Added at the owner's request: an open yard at each end of the corridor with a night cloud sky (tune it on the `Night_Sky` material). *Check: on PC the shadows are hard and clear, a moving capsule throws a shadow, the pools read clearly, and it holds 60 fps.*
 
 ### Core loop in graybox
 - [ ] **6. Player.** Third-person walk, crouch, sprint and jump with a Cinemachine follow camera. Keyboard and mouse, plus gamepad. *Check: the corridor can be walked end to end with both.*
