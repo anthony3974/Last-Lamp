@@ -1,4 +1,5 @@
 using System;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -31,6 +32,11 @@ namespace LastLamp
         [Tooltip("Seconds in the air before touching down counts as a landing.")]
         [SerializeField] float minAirTime = 0.15f;
 
+        [Header("Dodge")]
+        [SerializeField] float dodgeSpeed = 11f;
+        [SerializeField] float dodgeSeconds = 0.22f;
+        [SerializeField] float dodgeCooldown = 1.2f;
+
         [Header("Height (metres)")]
         [SerializeField] float standHeight = 1.8f;
         [SerializeField] float crouchHeight = 1.1f;
@@ -52,8 +58,13 @@ namespace LastLamp
         InputAction sprint;
         InputAction crouch;
         InputAction interact;
+        InputAction attack;
+        InputAction dodge;
 
         Vector3 horizontalVelocity;
+        Vector3 dodgeDirection;
+        float dodgeTimeLeft;
+        float dodgeCooldownLeft;
         float verticalVelocity;
         float currentHeight;
         float yaw;
@@ -73,6 +84,9 @@ namespace LastLamp
 
         // The Interact action has a Hold interaction, but going into hiding has to be instant.
         public bool InteractPressed => interact.WasPressedThisFrame();
+        public bool AttackPressed => attack.WasPressedThisFrame();
+        public bool IsDodging => dodgeTimeLeft > 0f;
+        public Vector3 LookDirection => Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
 
         void Awake()
         {
@@ -84,6 +98,8 @@ namespace LastLamp
             sprint = map.FindAction("Sprint", true);
             crouch = map.FindAction("Crouch", true);
             interact = map.FindAction("Interact", true);
+            attack = map.FindAction("Attack", true);
+            dodge = map.FindAction("Dodge", true);
 
             currentHeight = standHeight;
             yaw = transform.eulerAngles.y;
@@ -126,7 +142,25 @@ namespace LastLamp
 
         public void LeaveHiding(Vector3 position)
         {
+            PlaceAt(position);
+        }
+
+        /// <summary>Sends the player to a far-off point at once, from wherever they are, hidden or not.</summary>
+        public void Respawn(Vector3 position)
+        {
+            Vector3 jump = position - transform.position;
+            horizontalVelocity = Vector3.zero;
+            verticalVelocity = 0f;
+            dodgeTimeLeft = 0f;
+            airTime = 0f;
+            PlaceAt(position);
+            CinemachineCore.OnTargetObjectWarped(cameraTarget, jump);
+        }
+
+        void PlaceAt(Vector3 position)
+        {
             IsHidden = false;
+            controller.enabled = false;
             transform.position = position;
             body.gameObject.SetActive(true);
             controller.enabled = true;
@@ -181,8 +215,10 @@ namespace LastLamp
                 if (jump.WasPressedThisFrame() && !isCrouching) verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
             }
             verticalVelocity -= gravity * Time.deltaTime;
+            UpdateDodge(wish);
 
-            controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
+            Vector3 flatVelocity = IsDodging ? dodgeDirection * dodgeSpeed : horizontalVelocity;
+            controller.Move((flatVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
             TrackLanding();
 
             if (wish.sqrMagnitude > 0.01f)
@@ -190,6 +226,18 @@ namespace LastLamp
                 var facing = Quaternion.LookRotation(wish);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * Time.deltaTime);
             }
+        }
+
+        // Dodges toward the movement keys, or straight back when standing still.
+        void UpdateDodge(Vector3 wish)
+        {
+            dodgeTimeLeft = Mathf.Max(0f, dodgeTimeLeft - Time.deltaTime);
+            dodgeCooldownLeft = Mathf.Max(0f, dodgeCooldownLeft - Time.deltaTime);
+            if (!dodge.WasPressedThisFrame() || dodgeCooldownLeft > 0f || !controller.isGrounded) return;
+
+            dodgeDirection = wish.sqrMagnitude > 0.01f ? wish.normalized : -LookDirection;
+            dodgeTimeLeft = dodgeSeconds;
+            dodgeCooldownLeft = dodgeCooldown;
         }
 
         void TrackLanding()

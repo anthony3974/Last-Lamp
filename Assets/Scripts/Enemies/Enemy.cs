@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,6 +10,8 @@ namespace LastLamp
     [RequireComponent(typeof(NavMeshAgent), typeof(AudioSource))]
     public class Enemy : MonoBehaviour
     {
+        static readonly List<Enemy> Active = new List<Enemy>();
+
         const float ArriveMargin = 0.3f;
         const float NewDestinationDistance = 0.3f;
         const float ChaseRepathSeconds = 0.25f;
@@ -16,6 +19,7 @@ namespace LastLamp
         [Header("References")]
         [SerializeField] PlayerController player;
         [SerializeField] PlayerVisibility visibility;
+        [SerializeField] PlayerLives lives;
         [SerializeField] Transform[] patrolRoute;
         [SerializeField] Renderer alertLight;
         [SerializeField] AudioClip suspiciousSound;
@@ -34,6 +38,11 @@ namespace LastLamp
         [SerializeField] float chaseSpeed = 4.8f;
         [SerializeField] float searchSpeed = 2.2f;
 
+        [Header("Catching (metres)")]
+        [SerializeField] float catchReach = 1.4f;
+        [Tooltip("Reach to a player inside a hiding spot, measured to the middle of the spot.")]
+        [SerializeField] float hiddenCatchReach = 2.5f;
+
         [Header("Search")]
         [Tooltip("How far from where it lost the player the enemy looks around, in metres.")]
         [SerializeField] float searchRadius = 4f;
@@ -44,6 +53,8 @@ namespace LastLamp
         [ColorUsage(false, true)] [SerializeField] Color investigateColour = new Color(5f, 1.5f, 0f);
         [ColorUsage(false, true)] [SerializeField] Color chaseColour = new Color(8f, 0f, 0f);
         [ColorUsage(false, true)] [SerializeField] Color searchColour = new Color(0.8f, 0.8f, 4f);
+        [ColorUsage(false, true)] [SerializeField] Color attackColour = new Color(10f, 10f, 10f);
+        [ColorUsage(false, true)] [SerializeField] Color stunnedColour = new Color(0f, 4f, 0.5f);
 
         static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
@@ -70,10 +81,33 @@ namespace LastLamp
             alertBlock = new MaterialPropertyBlock();
         }
 
-        void OnEnable() => Noise.Emitted += Hear;
-        void OnDisable() => Noise.Emitted -= Hear;
+        void OnEnable()
+        {
+            Active.Add(this);
+            Noise.Emitted += Hear;
+        }
+
+        void OnDisable()
+        {
+            Active.Remove(this);
+            Noise.Emitted -= Hear;
+        }
 
         void Start() => ShowAlertColour();
+
+        public static void PunchNearby(Vector3 from, Vector3 direction, float reach, float halfAngle)
+        {
+            foreach (var enemy in Active)
+            {
+                if (CombatRules.InPunchArc(from, direction, enemy.transform.position, reach, halfAngle)) enemy.TakePunch(from);
+            }
+        }
+
+        void TakePunch(Vector3 playerPosition)
+        {
+            EnemyState before = brain.State;
+            if (brain.TryStun(playerPosition)) OnStateChanged(before);
+        }
 
         void Hear(NoiseEvent noise)
         {
@@ -91,7 +125,8 @@ namespace LastLamp
             brain.Tick(ReadSenses(), Time.deltaTime);
             heardNoise = false;
 
-            if (brain.State != before) OnStateChanged();
+            if (brain.State != before) OnStateChanged(before);
+            if (brain.CaughtPlayer) lives.Catch();
             Act();
         }
 
@@ -105,6 +140,8 @@ namespace LastLamp
                 DistanceFraction = Vector3.Distance(transform.position, playerPosition) / sightRange,
                 PlayerPosition = playerPosition,
                 PlayerHidden = player.IsHidden,
+                PlayerInReach = PlayerInReach(),
+                PlayerDodging = player.IsDodging,
                 HeardNoise = heardNoise,
                 NoisePosition = noisePosition,
                 Arrived = HasArrived(),
@@ -123,20 +160,30 @@ namespace LastLamp
             return !Physics.Raycast(eye, toPlayer / distance, distance, visionBlockers, QueryTriggerInteraction.Ignore);
         }
 
+        bool PlayerInReach()
+        {
+            Vector3 offset = player.transform.position - transform.position;
+            offset.y = 0f;
+            return offset.magnitude <= (player.IsHidden ? hiddenCatchReach : catchReach);
+        }
+
         bool HasArrived()
         {
             return hasDestination && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + ArriveMargin;
         }
 
-        void OnStateChanged()
+        void OnStateChanged(EnemyState previous)
         {
             hasDestination = false;
             searchPoint = brain.LastKnownPosition;
-            LampZone.SetOpenToEnemies(brain.State == EnemyState.Chase);
+            LampZone.SetOpenToEnemies(brain.IsHunting);
             ShowAlertColour();
 
+            // Going back to a chase after a missed grab or a stun isn't a new sighting, so it stays quiet.
+            bool newChase = brain.State == EnemyState.Chase && previous != EnemyState.Attack && previous != EnemyState.Stunned;
+
             if (brain.State == EnemyState.Suspicious) voice.PlayOneShot(suspiciousSound);
-            else if (brain.State == EnemyState.Chase) voice.PlayOneShot(spottedSound);
+            else if (newChase || brain.State == EnemyState.Attack) voice.PlayOneShot(spottedSound);
         }
 
         void Act()
@@ -159,6 +206,13 @@ namespace LastLamp
                     break;
                 case EnemyState.Search:
                     SearchArea();
+                    break;
+                case EnemyState.Attack:
+                    agent.isStopped = true;
+                    FaceLastKnownPosition();
+                    break;
+                case EnemyState.Stunned:
+                    agent.isStopped = true;
                     break;
             }
         }
@@ -233,6 +287,8 @@ namespace LastLamp
                 case EnemyState.Investigate: return investigateColour;
                 case EnemyState.Chase: return chaseColour;
                 case EnemyState.Search: return searchColour;
+                case EnemyState.Attack: return attackColour;
+                case EnemyState.Stunned: return stunnedColour;
                 default: return patrolColour;
             }
         }

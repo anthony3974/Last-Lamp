@@ -9,6 +9,8 @@ namespace LastLamp
         Investigate,
         Chase,
         Search,
+        Attack,
+        Stunned,
     }
 
     internal struct EnemySenses
@@ -18,6 +20,8 @@ namespace LastLamp
         public float DistanceFraction;
         public Vector3 PlayerPosition;
         public bool PlayerHidden;
+        public bool PlayerInReach;
+        public bool PlayerDodging;
         public bool HeardNoise;
         public Vector3 NoisePosition;
         public bool Arrived;
@@ -32,6 +36,9 @@ namespace LastLamp
         public const float LoseSightSeconds = 2.5f;
         public const float SearchSeconds = 4f;
         public const float HiddenSearchSeconds = 10f;
+        public const float AttackWindupSeconds = 0.6f;
+        public const float StunSeconds = 2.5f;
+        public const float StunImmunitySeconds = 6f;
 
         readonly DetectionMeter meter = new DetectionMeter();
         float secondsInState;
@@ -40,12 +47,33 @@ namespace LastLamp
         bool playerWasHidden;
         bool sawPlayerLastTick;
         bool watchedPlayerHide;
+        float secondsSinceStun = StunImmunitySeconds;
 
         public EnemyState State { get; private set; } = EnemyState.Patrol;
         public Vector3 LastKnownPosition { get; private set; }
 
+        /// <summary>True for the one tick in which this enemy catches the player.</summary>
+        public bool CaughtPlayer { get; private set; }
+
+        /// <summary>While hunting, an enemy doesn't stop for lamp light.</summary>
+        public bool IsHunting => State == EnemyState.Chase || State == EnemyState.Attack || State == EnemyState.Stunned;
+
+        /// <returns>False if the enemy shrugs the punch off because it was stunned too recently.</returns>
+        public bool TryStun(Vector3 playerPosition)
+        {
+            if (secondsSinceStun < StunImmunitySeconds) return false;
+
+            secondsSinceStun = 0f;
+            LastKnownPosition = playerPosition;
+            Enter(EnemyState.Stunned);
+            return true;
+        }
+
         public void Tick(in EnemySenses rawSenses, float deltaTime)
         {
+            CaughtPlayer = false;
+            secondsSinceStun += deltaTime;
+
             EnemySenses senses = ApplyHiding(rawSenses);
             meter.Tick(senses.SeesPlayer, senses.Exposure, senses.DistanceFraction, deltaTime);
             RememberPosition(senses);
@@ -58,6 +86,8 @@ namespace LastLamp
                 case EnemyState.Investigate: TickInvestigate(senses); break;
                 case EnemyState.Chase: TickChase(senses, deltaTime); break;
                 case EnemyState.Search: TickSearch(senses); break;
+                case EnemyState.Attack: TickAttack(senses); break;
+                case EnemyState.Stunned: TickStunned(); break;
             }
         }
 
@@ -82,7 +112,7 @@ namespace LastLamp
         void RememberPosition(in EnemySenses senses)
         {
             if (senses.HeardNoise) LastKnownPosition = senses.NoisePosition;
-            if (senses.SeesPlayer && (senses.Exposure > 0f || State == EnemyState.Chase)) LastKnownPosition = senses.PlayerPosition;
+            if (senses.SeesPlayer && (senses.Exposure > 0f || IsHunting)) LastKnownPosition = senses.PlayerPosition;
         }
 
         void TickPatrol(in EnemySenses senses)
@@ -102,8 +132,36 @@ namespace LastLamp
             else if (senses.Arrived) Enter(EnemyState.Search);
         }
 
+        void TickAttack(in EnemySenses senses)
+        {
+            if (secondsInState < AttackWindupSeconds) return;
+
+            if (senses.PlayerInReach && senses.SeesPlayer && !senses.PlayerDodging)
+            {
+                CaughtPlayer = true;
+                meter.Reset();
+                Enter(EnemyState.Patrol);
+            }
+            else
+            {
+                Enter(EnemyState.Chase);
+            }
+        }
+
+        void TickStunned()
+        {
+            if (secondsInState < StunSeconds) return;
+            Enter(meter.Stage == DetectionStage.Spotted ? EnemyState.Chase : EnemyState.Search);
+        }
+
         void TickChase(in EnemySenses senses, float deltaTime)
         {
+            if (senses.PlayerInReach && senses.SeesPlayer)
+            {
+                Enter(EnemyState.Attack);
+                return;
+            }
+
             secondsOutOfSight = senses.SeesPlayer ? 0f : secondsOutOfSight + deltaTime;
 
             bool reachedWhereItLostThem = senses.PlayerHidden && !senses.SeesPlayer && senses.Arrived;

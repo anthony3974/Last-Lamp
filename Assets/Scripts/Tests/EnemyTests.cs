@@ -78,6 +78,167 @@ namespace LastLamp.Tests
             Assert.That(close.Awareness, Is.GreaterThan(far.Awareness));
         }
 
+        static EnemySenses SeenInReach()
+        {
+            var senses = SeenInTheDark();
+            senses.PlayerInReach = true;
+            return senses;
+        }
+
+        [Test]
+        public void AnEnemyInReachWindsUpBeforeCatching()
+        {
+            var brain = BrainInChase();
+            var close = SeenInReach();
+
+            brain.Tick(close, Frame);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Attack));
+            Assert.That(brain.CaughtPlayer, Is.False);
+
+            brain.Tick(close, EnemyBrain.AttackWindupSeconds);
+            Assert.That(brain.CaughtPlayer, Is.True);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+        }
+
+        [Test]
+        public void CatchingOnlyLastsOneTick()
+        {
+            var brain = BrainInChase();
+            var close = SeenInReach();
+            brain.Tick(close, Frame);
+            brain.Tick(close, EnemyBrain.AttackWindupSeconds);
+
+            brain.Tick(new EnemySenses(), Frame);
+
+            Assert.That(brain.CaughtPlayer, Is.False);
+        }
+
+        [Test]
+        public void DodgingDuringTheWindupAvoidsBeingCaught()
+        {
+            var brain = BrainInChase();
+            var close = SeenInReach();
+            brain.Tick(close, Frame);
+            close.PlayerDodging = true;
+
+            brain.Tick(close, EnemyBrain.AttackWindupSeconds);
+
+            Assert.That(brain.CaughtPlayer, Is.False);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+        }
+
+        [Test]
+        public void GettingOutOfReachDuringTheWindupAvoidsBeingCaught()
+        {
+            var brain = BrainInChase();
+            brain.Tick(SeenInReach(), Frame);
+
+            brain.Tick(SeenInTheDark(), EnemyBrain.AttackWindupSeconds);
+
+            Assert.That(brain.CaughtPlayer, Is.False);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+        }
+
+        [Test]
+        public void LampLightDoesNotStopACatch()
+        {
+            var brain = BrainInChase();
+            var inLamp = new EnemySenses { SeesPlayer = true, Exposure = 0f, PlayerInReach = true };
+
+            brain.Tick(inLamp, Frame);
+            brain.Tick(inLamp, EnemyBrain.AttackWindupSeconds);
+
+            Assert.That(brain.CaughtPlayer, Is.True);
+        }
+
+        [Test]
+        public void AnEnemyThatWatchedThePlayerHideDragsThemOut()
+        {
+            var brain = BrainInChase();
+            var hidden = new EnemySenses { PlayerHidden = true, PlayerInReach = true };
+
+            brain.Tick(hidden, Frame);
+            brain.Tick(hidden, EnemyBrain.AttackWindupSeconds);
+
+            Assert.That(brain.CaughtPlayer, Is.True);
+        }
+
+        [Test]
+        public void AnEnemyThatDidNotSeeThePlayerHideCannotCatchThem()
+        {
+            var brain = BrainInChase();
+            brain.Tick(new EnemySenses(), Frame);
+            var hidden = new EnemySenses { PlayerHidden = true, PlayerInReach = true };
+
+            for (int i = 0; i < 1200; i++)
+            {
+                brain.Tick(hidden, Frame);
+                Assert.That(brain.CaughtPlayer, Is.False);
+                Assert.That(brain.State, Is.Not.EqualTo(EnemyState.Attack));
+            }
+        }
+
+        [Test]
+        public void APunchStunsAndCancelsACatch()
+        {
+            var brain = BrainInChase();
+            var close = SeenInReach();
+            brain.Tick(close, Frame);
+
+            Assert.That(brain.TryStun(Vector3.zero), Is.True);
+            brain.Tick(close, EnemyBrain.AttackWindupSeconds);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Stunned));
+            Assert.That(brain.CaughtPlayer, Is.False);
+        }
+
+        [Test]
+        public void AChaseResumesAfterAStun()
+        {
+            var brain = BrainInChase();
+            brain.TryStun(Vector3.zero);
+
+            brain.Tick(SeenInTheDark(), EnemyBrain.StunSeconds + Frame);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+        }
+
+        [Test]
+        public void PunchingAnUnawareEnemySendsItSearchingWithoutSpottingThePlayer()
+        {
+            var brain = new EnemyBrain();
+            brain.TryStun(Vector3.one);
+
+            brain.Tick(new EnemySenses(), EnemyBrain.StunSeconds + Frame);
+
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+            Assert.That(brain.LastKnownPosition, Is.EqualTo(Vector3.one));
+        }
+
+        [Test]
+        public void AnEnemyCannotBeStunLocked()
+        {
+            var brain = BrainInChase();
+            Assert.That(brain.TryStun(Vector3.zero), Is.True);
+            Assert.That(brain.TryStun(Vector3.zero), Is.False);
+
+            brain.Tick(SeenInTheDark(), EnemyBrain.StunSeconds + Frame);
+            Assert.That(brain.TryStun(Vector3.zero), Is.False);
+
+            brain.Tick(SeenInTheDark(), EnemyBrain.StunImmunitySeconds);
+            Assert.That(brain.TryStun(Vector3.zero), Is.True);
+        }
+
+        [TestCase(0f, 1f, true)]
+        [TestCase(0f, 3f, false)]
+        [TestCase(0f, -1f, false)]
+        public void PunchesOnlyLandInFrontAndInReach(float x, float z, bool lands)
+        {
+            bool result = CombatRules.InPunchArc(Vector3.zero, Vector3.forward, new Vector3(x, 0f, z), 2f, 75f);
+
+            Assert.That(result, Is.EqualTo(lands));
+        }
+
         [Test]
         public void HearingANoiseGivesAWarningFirst()
         {

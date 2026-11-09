@@ -17,8 +17,9 @@ Working so far:
 - One monster that patrols, sees, hears, warns, investigates, chases and searches, and only enters lamp light when it is already chasing you.
 - A hiding spot that ends a chase if the monster doesn't see you get in.
 - A dim flashlight that points where you look.
+- Getting caught: lives, checkpoints, one punch and one dodge.
 
-Not built yet: getting caught and combat. See [PLAN.md](PLAN.md) for what's next.
+Not built yet: an end point and restart. See [PLAN.md](PLAN.md) for what's next.
 
 ## Controls
 
@@ -30,8 +31,10 @@ Not built yet: getting caught and combat. See [PLAN.md](PLAN.md) for what's next
 | Crouch (hold) | Left Shift |
 | Jump | Space |
 | Hide / leave hiding spot | E |
+| Punch | Left mouse |
+| Dodge | Right mouse |
 
-Attack and Dodge have keys assigned (left mouse and right mouse), but they don't do anything yet. Controller buttons are placeholders and haven't been tested.
+Controller buttons are placeholders and haven't been tested.
 
 ## Getting started
 

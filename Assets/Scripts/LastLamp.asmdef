@@ -4,6 +4,7 @@
     "references": [
         "Unity.InputSystem",
         "Unity.AI.Navigation",
+        "Unity.Cinemachine",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],
