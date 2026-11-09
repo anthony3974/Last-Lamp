@@ -112,9 +112,7 @@ namespace LastLamp
 
         void Hear(NoiseEvent noise)
         {
-            Vector3 offset = noise.Position - transform.position;
-            offset.y = 0f;
-            if (offset.magnitude > noise.Radius) return;
+            if (Vector3.Distance(noise.Position, transform.position) > noise.Radius) return;
 
             heardNoise = true;
             noisePosition = noise.Position;
@@ -164,6 +162,8 @@ namespace LastLamp
 
         bool PlayerInReach()
         {
+            if (!LevelRules.SameLevel(transform.position, player.transform.position)) return false;
+
             Vector3 offset = player.transform.position - transform.position;
             offset.y = 0f;
             return offset.magnitude <= (player.IsHidden ? hiddenCatchReach : catchReach);
