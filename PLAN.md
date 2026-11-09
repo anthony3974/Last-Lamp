@@ -31,7 +31,14 @@ Unity locks the project while the editor is open, so change Project Settings thr
 
 Playtest result (owner, 2026-11-09): all good, and two monsters was the step the corridor needed.
 
+### Realistic human
+The design model is approved and kept in `Art/Human`, outside `Assets` so Unity doesn't import it yet: `human.blend`, `human.py` (the Blender script that builds it; run `blender -b --factory-startup --python human.py`) and `human_design_sheet.png`. `Assets/Scenes/Human_Design` is the room for comparing designs: the plain-shape `Human` figure, the `Old Player` capsule and two height posts (1.8 m standing, 1.1 m crouched). Everything for this is on `feature/human` in the `game-human` worktree.
+
+- [ ] **H1. Make the human game-ready.** It is a design model now: about 1.5 million triangles, with no UVs, baked textures or rig. Build a lower-poly mesh, bake the skin, cloth and leather into textures for URP, and rig it for Unity's Humanoid system. Keep the top hat a separate object. Optional: a better face, the weakest part up close. *Check: next to `Old Player` in `Human_Design`, it reads as the design sheet does, in lamp light and by flashlight.*
+- [ ] **H2. Put the human in the game.** Replace the capsule under `Player/Body` and drive walk, sprint, crouch, jump, punch and dodge from an Animator, using Mixamo animations the owner downloads with their Adobe login. The Player has no Animator yet. The hat reaches about 1.94 m against the 1.8 m controller, so it can clip low ceilings. *Check: the corridor can be walked end to end with no sliding feet, and nothing clips through the walls.*
+
 ### Decisions
+- **The human (owner, 2026-11-09).** The realistic player is a noir figure in a top hat with a dark red band, belted double-breasted trench coat, shirt and tie, leather gloves and dress shoes. It is 1.8 m tall to the top of the head, matching the `CharacterController`, with the eyes at about 1.7 m. The face and head are brush-sculpted displacement on one smooth base, because the added tubes used for the Wick read as sausages on a human face.
 - **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
 - **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
 - **Lit pools are a NavMesh area (2026-11-09).** With two monsters, the carving NavMesh Obstacle from task 9 would open a pool for every monster at once. Each pool is now a `Lit` area in the baked NavMesh, and each monster allows or forbids that area for itself. A lamp that goes out will need a NavMesh rebake to open its pool.
