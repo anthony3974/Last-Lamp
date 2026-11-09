@@ -11,7 +11,8 @@ namespace LastLamp
         const float MinStepSpeed = 0.5f;
 
         [Header("Sounds")]
-        [SerializeField] AudioClip footstep;
+        [Tooltip("Played in turn, one per step.")]
+        [SerializeField] AudioClip[] footsteps;
         [SerializeField] AudioClip landing;
         [SerializeField] float pitchVariation = 0.1f;
 
@@ -28,6 +29,7 @@ namespace LastLamp
         PlayerController player;
         AudioSource audioSource;
         float strideProgress;
+        int nextFootstep;
 
         void Awake()
         {
@@ -58,7 +60,10 @@ namespace LastLamp
         void TakeStep()
         {
             Noise.Emit(transform.position, NoiseRules.Footstep(player.IsSprinting, player.IsCrouching));
-            Play(footstep, player.IsSprinting ? sprintVolume : walkVolume);
+            if (footsteps.Length == 0) return;
+
+            Play(footsteps[nextFootstep], player.IsSprinting ? sprintVolume : walkVolume);
+            nextFootstep = (nextFootstep + 1) % footsteps.Length;
         }
 
         void OnLanded()

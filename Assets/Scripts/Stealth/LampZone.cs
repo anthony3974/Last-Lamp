@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace LastLamp
 {
@@ -31,6 +32,13 @@ namespace LastLamp
             float x = point.x - centre.x;
             float z = point.z - centre.z;
             return x * x + z * z <= radius * radius;
+        }
+
+        // Keeps the area enemies cannot enter the same size as the safe zone.
+        void OnValidate()
+        {
+            var obstacle = GetComponent<NavMeshObstacle>();
+            if (obstacle != null) obstacle.radius = radius;
         }
 
         void OnDrawGizmosSelected()
