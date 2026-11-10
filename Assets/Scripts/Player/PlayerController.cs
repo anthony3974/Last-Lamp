@@ -60,6 +60,7 @@ namespace LastLamp
         InputAction interact;
         InputAction attack;
         InputAction dodge;
+        InputAction flashlight;
 
         Vector3 horizontalVelocity;
         Vector3 dodgeDirection;
@@ -85,6 +86,7 @@ namespace LastLamp
         // The Interact action has a Hold interaction, but going into hiding has to be instant.
         public bool InteractPressed => interact.WasPressedThisFrame();
         public bool AttackPressed => attack.WasPressedThisFrame();
+        public bool FlashlightHeld => flashlight.IsPressed();
         public bool IsDodging => dodgeTimeLeft > 0f;
         public Vector3 LookDirection => Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
 
@@ -100,6 +102,7 @@ namespace LastLamp
             interact = map.FindAction("Interact", true);
             attack = map.FindAction("Attack", true);
             dodge = map.FindAction("Dodge", true);
+            flashlight = map.FindAction("Flashlight", true);
 
             currentHeight = standHeight;
             yaw = transform.eulerAngles.y;
