@@ -2,6 +2,7 @@
 
 **When asked "what's next?", the answer is the first open item under NEXT UP** (order set by the owner).
 **To continue in a new chat:** "Read PLAN.md and start the NEXT UP task."
+**On the `feature/monster` branch:** the next task is the first open item under Realistic monster, below. Remove this line when the branch is merged.
 
 Unity 6000.0.85f1, Universal Render Pipeline (URP).
 
@@ -31,13 +32,58 @@ Unity locks the project while the editor is open, so change Project Settings thr
 
 Playtest result (owner, 2026-11-09): all good, and two monsters was the step the corridor needed.
 
+### Warehouse
+- [ ] **13. Make the way through readable (owner, 2026-11-09).** In `Warehouse_01`, highlight the exit door (the blocked back door, owner 2026-11-09), the path routes and the stairs, or turn up the overall brightness if that reads better. Highlights must not look like lit pools, because only lit pools are safe. *Check: a first-time player can find the stairs and the exit without help, and can still tell safe light from dark.*
+- [ ] **14. Opening front door (owner, 2026-11-09).** The front door of `Warehouse_01` is only a gap in the wall for now. Give it a real door that opens. Monsters still must not follow the player outside, and locking the door behind the player stays the fallback if they do. *Check: the door opens and the player can go in and out, and a chasing monster stops at the doorway.*
+
+- [ ] **15. Make the game brighter (owner, 2026-11-10).** The game is too dark overall. Raise the base brightness (ambient light, volume exposure, the dim flashlight) without losing the noir look, and without lit pools stopping reading as the only safe light. Task 13 covers highlighting the way through in `Warehouse_01`; this one is the game-wide level, and the two can share the same pass. *Check: the corridor and the warehouse are easy to read on a normal monitor, the pools are still clearly the safe spots, and the stealth rules are unchanged.*
+
+- [ ] **16. Intro cutscene for `Warehouse_01` (owner, 2026-11-10, maybe).** A first-time player doesn't know how to get through. Before play starts, a short camera fly-through shows the route: in at the front door, up the stairs, along the catwalk, to the exit. It renders at full brightness, so the layout is clear, then fades back to the normal dark look when control returns. Skippable, and only shown the first time. *Check: a first-time player who watched it heads for the stairs without help.*
+- [ ] **17. "This door is blocked" text at the back door (owner, 2026-11-10).** When the player gets close to the blocked back door of `Warehouse_01`, show a short on-screen text box: "This door is blocked." It hides again when they walk away. Plain positioned UI, like the rest of the HUD. *Check: walking up to the door shows the text, walking away hides it, and it never shows anywhere else.*
+- [ ] **18. Checkpoint notification (owner, 2026-11-10).** When the player steps onto a new checkpoint (`Checkpoint.At` finds one that isn't the current one), show a brief on-screen message, such as "Checkpoint reached", that fades after a couple of seconds. Not again for the checkpoint they are already on. Works in both levels. *Check: each checkpoint shows the message once when first reached, and standing on it or coming back to the current one doesn't repeat it.*
+- [ ] **19. Checkpoint near the stairs (owner, 2026-11-10).** Add a checkpoint to `Warehouse_01` in the lit pool nearest the staircase, so a catch on the way up doesn't send the player back to the front. Probably the skylight pool `S1` at about X 18.3, Z 35.8, about 9 m from the stair foot (confirm with the owner). *Check: reaching it, then getting caught, returns the player there, and task 18's message shows when it is reached.*
+
+### Combat
+- [ ] **20. Punch sounds (owner, 2026-11-10).** A swing sound on every punch, and a separate hit sound when it lands and stuns an enemy. A punch the enemy shrugs off (stunned too recently) gets a duller sound, so the player can tell it didn't work. `PlayerCombat` already raises `Punched`, and `EnemyBrain.TryStun` already reports whether a punch landed. *Check: a miss, a stun and a shrugged-off punch each sound different.*
+- [ ] **21. A punched enemy searches instead of chasing (owner, 2026-11-10).** Today, when the stun ends, the enemy goes straight back to Chase if it still has the player spotted, which after a close punch is nearly always (`EnemyBrain.TickStunned`). Change it so the stun always ends in Search, around where it was punched, so a punch gives the player a real chance to slip away. From Search it can still spot the player again in the normal way. Add an edit mode test for it. *Check: after a punch, the enemy recovers into Search (its search colour), and it only chases again if it sees the player afresh.*
+- [ ] **22. Wind sound on the dodge roll (owner, 2026-11-10).** A short whoosh of air when the player rolls, timed to the roll and played from the player. It is only a sound for the player, not a noise event that enemies hear, unless the owner decides otherwise. *Check: every dodge, including a roll straight back, plays the whoosh once, in time with the roll.*
+
+### Realistic human
+The player's design model is in `Art/Human`, outside `Assets` so Unity doesn't import it. `design_sheet.png` shows it from every side, then under the game's real lamp, colour grade and follow camera. To rebuild it, run these in order (Blender 5.2 with the MPFB extension, about a minute in total):
+
+```
+blender -b --python Art/Human/body.py     # body, face and skeleton from MPFB
+blender -b --python Art/Human/human.py    # clothes, hair, eyes and skin, saved to human.blend
+blender -b --python Art/Human/sheet.py    # design_sheet.png
+blender -b --python Art/Human/game.py     # game version: Human.fbx and textures in Assets/Art/Human (about 5 minutes)
+blender -b --python Art/Human/sheet.py -- --game    # game_sheet.png, the game version under the same views
+```
+
+After `game.py`, the imports and materials were set up by **Tools > Build Human Stage** (`HumanStageBuilder`, now only in git history), which rebuilt `Human_Stage`. Each part's share of the triangles is in `PARTS` in `game.py`.
+
+Shape is tuned by named values in the scripts: `MACRO` and `DETAILS` in `body.py` for the body and face, `SLEEVE_RADII` in `clothes.py` for the sleeves, `NAPE_ABOVE_COLLAR` in `head.py` for the hair length at the back. The model is saved in an A-pose; `sheet.py` lowers the arms only for the renders.
+
+- [x] **H1. Approve the design.** Approved by the owner, 2026-11-10.
+- [x] **H2. Game version.** Approved by the owner, 2026-11-10: 28,625 triangles after H3 removed the hidden thighs, one mesh with four materials (coat atlas 4096, clothes and head 2048, hair and eyes 1024), and `Human_Stage` with `HumanStageBuilder` (removed after H4, kept in history).
+- [x] **H3. Rig for Unity.** Approved by the owner, 2026-11-10. He imports as Humanoid with the T-pose set by `HumanStageBuilder`. The lower coat has 8 columns of 2 bones, hinged at the belt, and `CoatSkirt` swings each column out when a knee or shin reaches it. `game.py` leaves out the trousers above `TROUSERS_HIDDEN_ABOVE`, because they are always under the coat and a raised thigh would come through it. Known limit: a deep crouch (thighs about 70 degrees up) still shows a small slit at the knee.
+- [x] **H4. Put him in the game.** Passed by the owner, 2026-11-10. **Tools > Put Human In Game** (`HumanGameBuilder`) imports the clips in `Assets/Art/Human/Animations`, builds `Human.controller` and the `Human` prefab, and puts him under `Player/Body` in both levels in place of the capsule. *Check: both levels can be crossed with no sliding feet and nothing clipping through walls.*
+  - Clip speeds are matched to the player's: the walk clip plays at 1.3x for 3 m/s, the sprint at 1.33x for 5.5 m/s, the crouch walk at 1.18x for 1.5 m/s. The roll plays at 1.8x to fit the dodge, and the punch at 1.9x to fit its cooldown.
+  - Dodge and punch (owner, 2026-11-10): the dodge is 0.45 s at 7 m/s (3.2 m) instead of 0.22 s at 11 m/s (2.4 m), so the roll can be seen. Punch reach is 2.5 m instead of 2 m. `HumanGameBuilder` writes these into both scenes. A longer dodge also means a longer window in which an enemy's catch misses.
+  - The crouch walk clip stands much taller than the crouched idle, so `PlayerAnimator` lowers his hips by `crouchWalkDrop` with the feet held in place.
+  - Footstep sounds come from events in the walk and sprint clips. The noise enemies hear still runs on `PlayerNoise`'s stride timer.
+  - `CoatSkirt` hangs toward gravity, so the coat stays down when he leans, and hands back to the body when he tips over in the roll.
+  - `Ducking.fbx` was downloaded but not used. It is removed, and kept in history at commit `3f377fb`.
+  - `HumanStageBuilder` and `HumanGameBuilder` are removed now that he is in the game, and kept in git history. Don't bring back **Build Human Stage** as it was: it copies `Player/Body` for its capsule, which is now the Human.
+  - The top of the hat is at 1.89 m against the 1.8 m controller, so it can clip low ceilings.
+
 ### Realistic monster (the Wick)
 The design model is approved and kept in `Art/Wick`, outside `Assets` so Unity doesn't import it yet: `wick.blend`, `wick.py` (the Blender script that builds it) and `wick_design_sheet.png`. `Assets/Scenes/MonsterStage_01` is the room for trying it in, with a `Monster Spot` to put it under. Delete `Assets/Editor/MonsterStageBuilder.cs` once that scene is confirmed.
 
-- [ ] **13. Make the Wick game-ready.** It is a design model now: about 190,000 triangles, with no UVs, baked textures or rig. Build a lower-poly mesh, bake the skin and char into textures for URP, and rig it for walk, chase, grab and stun. Keep the seam and spine glands as one separate mesh using `Monster_Alert`, so `Enemy` can colour it through its `Alert Light` reference. Optional: a better face, the weakest part up close. *Check: under `Monster Spot` in `MonsterStage_01`, it reads as the design sheet does in lamp light and by flashlight, and the seam changes colour with each state.*
-- [ ] **14. Put the Wick in the game.** Replace the capsule on the corridor monsters. Its arms span about 1.05 m against the agent's 0.9 m, and its head reaches 0.65 m forward of the agent's centre, so pull the arms in or widen the agent. *Check: it patrols and chases the corridor with no visible clipping through walls.*
+- [ ] **M1. Make the Wick game-ready.** It is a design model now: about 190,000 triangles, with no UVs, baked textures or rig. Build a lower-poly mesh, bake the skin and char into textures for URP, and rig it for walk, chase, grab and stun. Keep the seam and spine glands as one separate mesh using `Monster_Alert`, so `Enemy` can colour it through its `Alert Light` reference. Optional: a better face, the weakest part up close. *Check: under `Monster Spot` in `MonsterStage_01`, it reads as the design sheet does in lamp light and by flashlight, and the seam changes colour with each state.*
+- [ ] **M2. Put the Wick in the game.** Replace the capsule on the monsters in both levels (`Corridor_01` and `Warehouse_01`). Its arms span about 1.05 m against the agent's 0.9 m, and its head reaches 0.65 m forward of the agent's centre, so pull the arms in or widen the agent. *Check: it patrols and chases the corridor with no visible clipping through walls.*
 
 ### Decisions
+- **The human (owner, 2026-11-09).** A noir man in a top hat with a dark red band, sitting just above the brows; a belted double-breasted trench coat to the knee; white shirt, striped tie, leather gloves, matte dress shoes; dark hair down to the collar at the back. The body and face come from MPFB and the animation from Mixamo; everything else is scripted. Don't use the `game-human` or `game-human-advanced` worktrees as references for this version.
 - **The Wick (owner, 2026-11-09).** The realistic monster is a starved, hunched creature burned by light: wet ashen skin, with hands, forearms and feet charred black. It is 1.95 m tall with its eyes at 1.7 m, matching the height `Enemy` sees from. Its long arms hang almost to the shins to suit the 1.4 m catch reach. A glowing seam down the breastbone and glands down the spine replace the sphere above the head as the warning cue, so it reads from the front and the back.
 - **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
 - **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
@@ -45,7 +91,9 @@ The design model is approved and kept in `Art/Wick`, outside `Assets` so Unity d
 - **Getting caught (2026-11-09, starting values, open to change).** A chasing enemy in reach winds up for 0.6 s, with a white light and a sound, so the player can react. A catch costs one of 3 lives and returns the player to the last checkpoint touched; losing the last life refills them and returns to the first checkpoint. A punch stuns for 2.5 s and can't land again for 6 s, so an enemy can't be stun-locked. A dodge moves the player out of reach.
 - **Third-person camera behind the player (owner, 2026-11-08).** The player can see their own shadow and nearby enemies, and it suits Arkham-style combat later.
 - **Corridor layout (owner, 2026-11-08).** 6 m wide with lamps on alternating walls, so an enemy has a dark lane about 2.4 m wide past each pool. With lamps in the middle, a pool would fill the corridor and trap the enemy in one gap.
-- **Flashlight (owner, 2026-11-09).** The player carries a small dim flashlight that points where they look. For now it is only for seeing by: it doesn't change exposure and enemies ignore it.
+- **Flashlight (owner, 2026-11-09).** The player carries a small dim flashlight that points where they look. It is for seeing by and doesn't change exposure.
+- **Bright flashlight (owner, 2026-11-10).** Holding F makes the flashlight brighter and further reaching, but adds 0.5 exposure, even inside a lamp pool, so enemies notice the player faster. It goes out while hiding.
+- **Street car (owner, 2026-11-10).** The real `Car.prefab` (from `game-car`) replaces the graybox car on the street outside `Warehouse_01`. It is a static prop: one box collider, all parts on the `VisionBlocker` layer, no driving. It sits outside the baked NavMesh volume, so no rebake is needed.
 - **PC first (owner, 2026-11-08).** Mobile is secondary and may never ship. If it comes back, it needs touch controls and a new lighting pass, because the Mobile profile has lamp shadows off. Baking the lamps is the likely fix, but baked lamps can't go out and characters don't throw shadows from them.
 
 ### Not in this list

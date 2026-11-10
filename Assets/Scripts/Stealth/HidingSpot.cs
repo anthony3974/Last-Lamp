@@ -28,6 +28,8 @@ namespace LastLamp
 
             foreach (var spot in Active)
             {
+                if (!LevelRules.SameLevel(spot.transform.position, point)) continue;
+
                 Vector3 offset = spot.transform.position - point;
                 offset.y = 0f;
                 float distance = offset.magnitude;

@@ -4,9 +4,11 @@ namespace LastLamp
 {
     internal static class CombatRules
     {
-        /// <summary>Whether a punch thrown from one point, in a direction, reaches a target. Height is ignored.</summary>
+        /// <summary>Whether a punch thrown from one point, in a direction, reaches a target on the same level.</summary>
         public static bool InPunchArc(Vector3 from, Vector3 direction, Vector3 target, float reach, float halfAngle)
         {
+            if (!LevelRules.SameLevel(from, target)) return false;
+
             Vector3 offset = target - from;
             offset.y = 0f;
             direction.y = 0f;

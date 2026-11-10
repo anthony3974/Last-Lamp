@@ -18,6 +18,14 @@ namespace LastLamp.Tests
         }
 
         [Test]
+        public void BrightLightRaisesExposureEverywhere()
+        {
+            Assert.That(VisibilityRules.Target(false, 0f, Sprint, false, true), Is.GreaterThan(VisibilityRules.Target(false, 0f, Sprint, false)));
+            Assert.That(VisibilityRules.Target(true, 0f, Sprint, false, true), Is.GreaterThan(0f));
+            Assert.That(VisibilityRules.Target(false, Sprint, Sprint, false, true), Is.EqualTo(1f));
+        }
+
+        [Test]
         public void FasterMeansMoreExposed()
         {
             float still = VisibilityRules.Target(false, 0f, Sprint, false);

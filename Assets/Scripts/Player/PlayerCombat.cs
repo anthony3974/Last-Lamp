@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace LastLamp
@@ -8,12 +9,14 @@ namespace LastLamp
     [RequireComponent(typeof(PlayerController))]
     public class PlayerCombat : MonoBehaviour
     {
-        [SerializeField] float punchReach = 2f;
+        [SerializeField] float punchReach = 2.5f;
         [SerializeField] float punchHalfAngle = 75f;
         [SerializeField] float punchCooldown = 0.6f;
 
         PlayerController player;
         float cooldownLeft;
+
+        public event Action Punched;
 
         void Awake()
         {
@@ -27,6 +30,7 @@ namespace LastLamp
 
             cooldownLeft = punchCooldown;
             Enemy.PunchNearby(transform.position, player.LookDirection, punchReach, punchHalfAngle);
+            Punched?.Invoke();
         }
     }
 }
