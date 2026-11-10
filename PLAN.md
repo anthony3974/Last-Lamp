@@ -2,6 +2,7 @@
 
 **When asked "what's next?", the answer is the first open item under NEXT UP** (order set by the owner).
 **To continue in a new chat:** "Read PLAN.md and start the NEXT UP task."
+**On the `feature/new-human` branch:** the next task is the first open item under Realistic human, below. Remove this line when the branch is merged.
 
 Unity 6000.0.85f1, Universal Render Pipeline (URP).
 
@@ -35,7 +36,29 @@ Playtest result (owner, 2026-11-09): all good, and two monsters was the step the
 - [ ] **13. Make the way through readable (owner, 2026-11-09).** In `Warehouse_01`, highlight the exit door (the blocked back door, owner 2026-11-09), the path routes and the stairs, or turn up the overall brightness if that reads better. Highlights must not look like lit pools, because only lit pools are safe. *Check: a first-time player can find the stairs and the exit without help, and can still tell safe light from dark.*
 - [ ] **14. Opening front door (owner, 2026-11-09).** The front door of `Warehouse_01` is only a gap in the wall for now. Give it a real door that opens. Monsters still must not follow the player outside, and locking the door behind the player stays the fallback if they do. *Check: the door opens and the player can go in and out, and a chasing monster stops at the doorway.*
 
+### Realistic human
+The player's design model is in `Art/Human`, outside `Assets` so Unity doesn't import it. `design_sheet.png` shows it from every side, then under the game's real lamp, colour grade and follow camera. To rebuild it, run these in order (Blender 5.2 with the MPFB extension, about a minute in total):
+
+```
+blender -b --python Art/Human/body.py     # body, face and skeleton from MPFB
+blender -b --python Art/Human/human.py    # clothes, hair, eyes and skin, saved to human.blend
+blender -b --python Art/Human/sheet.py    # design_sheet.png
+```
+
+Shape is tuned by named values in the scripts: `MACRO` and `DETAILS` in `body.py` for the body and face, `SLEEVE_RADII` in `clothes.py` for the sleeves, `NAPE_ABOVE_COLLAR` in `head.py` for the hair length at the back. The model is saved in an A-pose; `sheet.py` lowers the arms only for the renders.
+
+- [ ] **H1. Approve the design.** All of the owner's feedback so far is in. One thing to confirm: "arms to slim" was read as too slim, so the sleeves were made fuller. *Check: the owner approves `design_sheet.png`.*
+- [ ] **H2. Game version.** It is about 195,000 faces now. Build a version of about 30,000 triangles and bake the folds, stitching and fabric into textures for URP. Make a `Human_Stage` scene with the real `Lamp` prefab, flashlight and grade, and the current capsule beside him, using a one-off Tools script. *Check: in `Human_Stage` it reads like the sheet, in lamp light and by flashlight.*
+- [ ] **H3. Rig for Unity.** It uses MPFB's `mixamo_unity` skeleton, so import it as Humanoid and use Enforce T-Pose, because the rest pose is an A-pose. Add extra bones for the lower half of the coat so it doesn't break when he crouches or runs. *Check: crouch and raised-arm poses show no collapsing joints and no body poking through.*
+- [ ] **H4. Put him in the game.** Place one `Human` prefab under `Player/Body` in both `Corridor_01` and `Warehouse_01`, replacing the `Mesh` and `Visor` capsule (the Player itself isn't a prefab). Drive walk, sprint, crouch, jump, punch and dodge from an Animator, using Mixamo clips the owner downloads with their Adobe login. *Check: both levels can be crossed with no sliding feet and nothing clipping through walls.*
+  - `PlayerController` scales `Body` to fake a crouch (line 188). Remove that once the crouch animation is in.
+  - `PlayerCombat` needs an event for when a punch happens.
+  - Walking is 3 m/s, faster than people naturally walk. Keep the tuned speed and use a hurried half-jog clip.
+  - Footstep sounds fire every 1.7 m at walking speed, but feet land about every 1 m. Play the sound from the animation and leave the noise enemies hear on the current timer, so stealth balance doesn't change.
+  - The top of the hat is at 1.89 m against the 1.8 m controller, so it can clip low ceilings.
+
 ### Decisions
+- **The human (owner, 2026-11-09).** A noir man in a top hat with a dark red band, sitting just above the brows; a belted double-breasted trench coat to the knee; white shirt, striped tie, leather gloves, matte dress shoes; dark hair down to the collar at the back. The body and face come from MPFB and the animation from Mixamo; everything else is scripted. Don't use the `game-human` or `game-human-advanced` worktrees as references for this version.
 - **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
 - **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
 - **Lit pools are a NavMesh area (2026-11-09).** With two monsters, the carving NavMesh Obstacle from task 9 would open a pool for every monster at once. Each pool is now a `Lit` area in the baked NavMesh, and each monster allows or forbids that area for itself. A lamp that goes out will need a NavMesh rebake to open its pool.
