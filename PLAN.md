@@ -37,6 +37,8 @@ Playtest result (owner, 2026-11-09): all good, and two monsters was the step the
 
 - [ ] **15. Make the game brighter (owner, 2026-11-10).** The game is too dark overall. Raise the base brightness (ambient light, volume exposure, the dim flashlight) without losing the noir look, and without lit pools stopping reading as the only safe light. Task 13 covers highlighting the way through in `Warehouse_01`; this one is the game-wide level, and the two can share the same pass. *Check: the corridor and the warehouse are easy to read on a normal monitor, the pools are still clearly the safe spots, and the stealth rules are unchanged.*
 
+- [ ] **16. Intro cutscene for `Warehouse_01` (owner, 2026-11-10, maybe).** A first-time player doesn't know how to get through. Before play starts, a short camera fly-through shows the route: in at the front door, up the stairs, along the catwalk, to the exit. It renders at full brightness, so the layout is clear, then fades back to the normal dark look when control returns. Skippable, and only shown the first time. *Check: a first-time player who watched it heads for the stairs without help.*
+
 ### Decisions
 - **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
 - **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
