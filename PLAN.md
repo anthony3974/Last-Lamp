@@ -43,12 +43,16 @@ The player's design model is in `Art/Human`, outside `Assets` so Unity doesn't i
 blender -b --python Art/Human/body.py     # body, face and skeleton from MPFB
 blender -b --python Art/Human/human.py    # clothes, hair, eyes and skin, saved to human.blend
 blender -b --python Art/Human/sheet.py    # design_sheet.png
+blender -b --python Art/Human/game.py     # game version: Human.fbx and textures in Assets/Art/Human (about 5 minutes)
+blender -b --python Art/Human/sheet.py -- --game    # game_sheet.png, the game version under the same views
 ```
+
+After `game.py`, run **Tools > Build Human Stage** in Unity to set up the imports and materials and rebuild `Human_Stage`. Each part's share of the triangles is in `PARTS` in `game.py`.
 
 Shape is tuned by named values in the scripts: `MACRO` and `DETAILS` in `body.py` for the body and face, `SLEEVE_RADII` in `clothes.py` for the sleeves, `NAPE_ABOVE_COLLAR` in `head.py` for the hair length at the back. The model is saved in an A-pose; `sheet.py` lowers the arms only for the renders.
 
-- [ ] **H1. Approve the design.** All of the owner's feedback so far is in. One thing to confirm: "arms to slim" was read as too slim, so the sleeves were made fuller. *Check: the owner approves `design_sheet.png`.*
-- [ ] **H2. Game version.** It is about 195,000 faces now. Build a version of about 30,000 triangles and bake the folds, stitching and fabric into textures for URP. Make a `Human_Stage` scene with the real `Lamp` prefab, flashlight and grade, and the current capsule beside him, using a one-off Tools script. *Check: in `Human_Stage` it reads like the sheet, in lamp light and by flashlight.*
+- [x] **H1. Approve the design.** Approved by the owner, 2026-11-10.
+- [x] **H2. Game version.** Approved by the owner, 2026-11-10: 29,474 triangles, one mesh with four materials (coat atlas 4096, clothes and head 2048, hair and eyes 1024), and `Human_Stage` with `HumanStageBuilder`. Delete that tool once he is in the game.
 - [ ] **H3. Rig for Unity.** It uses MPFB's `mixamo_unity` skeleton, so import it as Humanoid and use Enforce T-Pose, because the rest pose is an A-pose. Add extra bones for the lower half of the coat so it doesn't break when he crouches or runs. *Check: crouch and raised-arm poses show no collapsing joints and no body poking through.*
 - [ ] **H4. Put him in the game.** Place one `Human` prefab under `Player/Body` in both `Corridor_01` and `Warehouse_01`, replacing the `Mesh` and `Visor` capsule (the Player itself isn't a prefab). Drive walk, sprint, crouch, jump, punch and dodge from an Animator, using Mixamo clips the owner downloads with their Adobe login. *Check: both levels can be crossed with no sliding feet and nothing clipping through walls.*
   - `PlayerController` scales `Body` to fake a crouch (line 188). Remove that once the crouch animation is in.

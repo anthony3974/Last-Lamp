@@ -1,6 +1,7 @@
 """Renders the design sheet from human.blend into design_sheet.png.
 
 Run:  blender -b --python Art/Human/sheet.py
+      blender -b --python Art/Human/sheet.py -- --game     (game.blend, written to game_sheet.png)
 
 The two right-hand night panels use the game's real values: the Lamp prefab, the flashlight, the follow
 camera, the ambient colours and the Volume grade from Corridor_01.
@@ -213,7 +214,7 @@ def set_visible(objects, visible):
 
 def main():
     global BUILD
-    bpy.ops.wm.open_mainfile(filepath=os.path.join(HERE, "human.blend"))
+    bpy.ops.wm.open_mainfile(filepath=os.path.join(HERE, "game.blend" if GAME_VERSION else "human.blend"))
     BUILD = os.path.join(bpy.app.tempdir or "/tmp")
     rig = bpy.data.objects["Rig"]
     pose_for_display(rig)
@@ -288,7 +289,7 @@ def main():
     rgba[..., :3] = sheet[::-1]
     image = bpy.data.images.new("design_sheet", sheet.shape[1], sheet.shape[0], alpha=False)
     image.pixels.foreach_set(rgba.ravel())
-    image.filepath_raw = os.path.join(HERE, "design_sheet.png")
+    image.filepath_raw = os.path.join(HERE, "game_sheet.png" if GAME_VERSION else "design_sheet.png")
     image.file_format = "PNG"
     image.save()
 
@@ -304,6 +305,7 @@ def main():
 
 
 BUILD = "/tmp"
+GAME_VERSION = "--game" in sys.argv
 
 if __name__ == "__main__":
     main()

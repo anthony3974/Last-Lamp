@@ -312,7 +312,15 @@ def tube(name, path, radius, closed=False, segments=12):
     tangents /= np.linalg.norm(tangents, axis=1, keepdims=True)
     reference = np.array([0.0, 0.0, 1.0]) if abs(tangents[0, 2]) < 0.9 else np.array([1.0, 0.0, 0.0])
     side = np.cross(tangents, reference)
-    side /= np.linalg.norm(side, axis=1, keepdims=True)
+    lengths = np.linalg.norm(side, axis=1, keepdims=True)
+    if (lengths < 1e-6).any():
+        # The path runs along the reference somewhere, so carry the first ring's direction along the path instead.
+        side[0] /= lengths[0]
+        for i in range(1, count):
+            side[i] = side[i - 1] - tangents[i] * np.dot(side[i - 1], tangents[i])
+            side[i] /= np.linalg.norm(side[i])
+    else:
+        side /= lengths
     up = np.cross(side, tangents)
     angles = np.linspace(0, 2 * math.pi, segments, endpoint=False)
     points = np.empty((count, segments, 3))
