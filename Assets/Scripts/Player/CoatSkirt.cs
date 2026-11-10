@@ -6,6 +6,7 @@ namespace LastLamp
     /// <summary>
     /// Moves the bones in the lower half of the coat so the legs don't come through it.
     /// Animation clips only drive the body, so each column of the skirt swings out here when a knee or shin reaches it.
+    /// The columns hang toward real gravity, so the coat stays down when he leans or crouches instead of tilting with his hips.
     /// </summary>
     public class CoatSkirt : MonoBehaviour
     {
@@ -22,18 +23,25 @@ namespace LastLamp
         // Each column follows part of its neighbours, so the cloth doesn't crease between them.
         const float NeighbourShare = 0.6f;
         const float Response = 18f;
+        // However he leans, the coat never turns further than this from where it sits on his hips, so it can't pass through him.
+        const float MaxBodyTilt = 75f;
+        // Tipped past these (a roll, a fall), gravity and the legs hand over to the body. Otherwise the coat would stretch
+        // out sideways, or open into a ring around legs that are above him.
+        const float GravityFullBelow = 45f;
+        const float GravityGoneAbove = 90f;
 
         class Column
         {
             public Transform Upper, Lower;
             public Quaternion RestUpper, RestLower;
-            public Vector3 Outward, Axis, LowerAxis;
+            // Rest directions of the two bones: the upper in hip space, the lower in the upper bone's space.
+            public Vector3 Outward, UpperRest, LowerRest;
             public float RestUpperAngle, RestLowerAngle, UpperAngle, LowerAngle, Target;
         }
 
         Column[] columns;
+        Vector3 restDown;
         Transform hips, leftKnee, rightKnee, leftAnkle, rightAnkle;
-        Vector3 down;
 
         void Awake() => Setup();
 
@@ -49,24 +57,24 @@ namespace LastLamp
             rightKnee = Bone("RightLeg");
             leftAnkle = Bone("LeftFoot");
             rightAnkle = Bone("RightFoot");
-            down = hips.InverseTransformDirection(Vector3.down).normalized;
+            Vector3 down = hips.InverseTransformDirection(Vector3.down).normalized;
+            restDown = down;
 
             Vector3 middle = Vector3.zero;
             Transform[] uppers = bones.Where(bone => bone.name.StartsWith(BonePrefix) && bone.name.EndsWith("_Upper")).OrderBy(bone => bone.name).ToArray();
             foreach (Transform upper in uppers) middle += hips.InverseTransformPoint(upper.position);
             middle /= uppers.Length;
 
-            columns = uppers.Select(upper => MakeColumn(upper, middle)).ToArray();
+            columns = uppers.Select(upper => MakeColumn(upper, middle, down)).ToArray();
         }
 
-        Column MakeColumn(Transform upper, Vector3 middle)
+        Column MakeColumn(Transform upper, Vector3 middle, Vector3 down)
         {
             Transform lower = upper.GetChild(0);
             Vector3 top = hips.InverseTransformPoint(upper.position);
             Vector3 knee = hips.InverseTransformPoint(lower.position);
             Vector3 hem = hips.InverseTransformPoint(lower.TransformPoint(EndOfLower(lower)));
             Vector3 outward = Vector3.ProjectOnPlane(top - middle, down).normalized;
-            Vector3 axis = Vector3.Cross(down, outward);
             return new Column
             {
                 Upper = upper,
@@ -74,8 +82,8 @@ namespace LastLamp
                 RestUpper = upper.localRotation,
                 RestLower = lower.localRotation,
                 Outward = outward,
-                Axis = axis,
-                LowerAxis = Quaternion.Inverse(upper.localRotation) * axis,
+                UpperRest = knee - top,
+                LowerRest = Quaternion.Inverse(upper.localRotation) * (hem - knee),
                 RestUpperAngle = AngleFromDown(top, knee, down, outward),
                 RestLowerAngle = AngleFromDown(knee, hem, down, outward),
             };
@@ -89,34 +97,59 @@ namespace LastLamp
         {
             if (columns == null) Setup();
 
+            Vector3 gravity = hips.InverseTransformDirection(Vector3.down).normalized;
+            float tipped = Vector3.Angle(gravity, restDown);
+            float handOver = Mathf.InverseLerp(GravityFullBelow, GravityGoneAbove, tipped);
+            Vector3 down = Vector3.Slerp(gravity, restDown, handOver);
+            float legs = 1f - handOver;
             foreach (Column column in columns)
             {
                 Vector3 top = hips.InverseTransformPoint(column.Upper.position);
-                column.Target = UpperSwing(Reach(top, leftKnee, rightKnee, column), column.RestUpperAngle, MaxUpperAngle);
+                column.Target = legs * UpperSwing(Reach(top, leftKnee, rightKnee, down, Away(column, down)), column.RestUpperAngle, MaxUpperAngle);
             }
 
             float blend = deltaTime <= 0f ? 1f : 1f - Mathf.Exp(-Response * deltaTime);
             for (int i = 0; i < columns.Length; i++)
             {
                 Column column = columns[i];
+                Vector3 away = Away(column, down);
                 float neighbour = Mathf.Max(columns[(i + columns.Length - 1) % columns.Length].Target, columns[(i + 1) % columns.Length].Target);
                 column.UpperAngle = Mathf.Lerp(column.UpperAngle, Mathf.Max(column.Target, neighbour * NeighbourShare), blend);
-                column.Upper.localRotation = Quaternion.AngleAxis(column.UpperAngle, column.Axis) * column.RestUpper;
+                Vector3 upperDirection = Tipped(down, away, column.RestUpperAngle + column.UpperAngle);
+                Quaternion upperTurn = Limit(Quaternion.FromToRotation(column.UpperRest, upperDirection));
+                column.Upper.localRotation = upperTurn * column.RestUpper;
 
                 Vector3 knee = hips.InverseTransformPoint(column.Lower.position);
-                float reach = Reach(knee, leftAnkle, rightAnkle, column);
-                float target = LowerSwing(reach, column.RestLowerAngle, column.UpperAngle, MaxLowerAngle);
+                float reach = Reach(knee, leftAnkle, rightAnkle, down, away);
+                float target = legs * LowerSwing(reach, column.RestLowerAngle, column.UpperAngle, MaxLowerAngle);
                 column.LowerAngle = Mathf.Lerp(column.LowerAngle, target, blend);
-                column.Lower.localRotation = Quaternion.AngleAxis(column.LowerAngle, column.LowerAxis) * column.RestLower;
+                Vector3 lowerDirection = Tipped(down, away, column.RestLowerAngle + column.UpperAngle + column.LowerAngle);
+                Vector3 inUpper = Quaternion.Inverse(column.Upper.localRotation) * lowerDirection;
+                column.Lower.localRotation = Limit(Quaternion.FromToRotation(column.LowerRest, inUpper)) * column.RestLower;
             }
         }
 
-        float Reach(Vector3 from, Transform left, Transform right, Column column)
+        /// <summary>The column's outward direction, level with the ground as it is now.</summary>
+        static Vector3 Away(Column column, Vector3 down)
         {
-            Vector3 skin = column.Outward * (LegRadius / hips.lossyScale.x);
+            Vector3 level = Vector3.ProjectOnPlane(column.Outward, down);
+            return level.sqrMagnitude > 0.01f ? level.normalized : column.Outward;
+        }
+
+        static Vector3 Tipped(Vector3 down, Vector3 away, float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+            return down * Mathf.Cos(radians) + away * Mathf.Sin(radians);
+        }
+
+        static Quaternion Limit(Quaternion turn) => Quaternion.RotateTowards(Quaternion.identity, turn, MaxBodyTilt);
+
+        float Reach(Vector3 from, Transform left, Transform right, Vector3 down, Vector3 away)
+        {
+            Vector3 skin = away * (LegRadius / hips.lossyScale.x);
             return Mathf.Max(
-                AngleFromDown(from, hips.InverseTransformPoint(left.position) + skin, down, column.Outward),
-                AngleFromDown(from, hips.InverseTransformPoint(right.position) + skin, down, column.Outward));
+                AngleFromDown(from, hips.InverseTransformPoint(left.position) + skin, down, away),
+                AngleFromDown(from, hips.InverseTransformPoint(right.position) + skin, down, away));
         }
 
         /// <summary>How far a point is from straight down, tipped toward outward, in degrees. Inward is negative.</summary>

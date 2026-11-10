@@ -54,12 +54,14 @@ Shape is tuned by named values in the scripts: `MACRO` and `DETAILS` in `body.py
 - [x] **H1. Approve the design.** Approved by the owner, 2026-11-10.
 - [x] **H2. Game version.** Approved by the owner, 2026-11-10: 28,625 triangles after H3 removed the hidden thighs, one mesh with four materials (coat atlas 4096, clothes and head 2048, hair and eyes 1024), and `Human_Stage` with `HumanStageBuilder`. Delete that tool once he is in the game.
 - [x] **H3. Rig for Unity.** Approved by the owner, 2026-11-10. He imports as Humanoid with the T-pose set by `HumanStageBuilder`. The lower coat has 8 columns of 2 bones, hinged at the belt, and `CoatSkirt` swings each column out when a knee or shin reaches it. `game.py` leaves out the trousers above `TROUSERS_HIDDEN_ABOVE`, because they are always under the coat and a raised thigh would come through it. Known limit: a deep crouch (thighs about 70 degrees up) still shows a small slit at the knee.
-- [ ] **H4. Put him in the game.** Place one `Human` prefab under `Player/Body` in both `Corridor_01` and `Warehouse_01`, replacing the `Mesh` and `Visor` capsule (the Player itself isn't a prefab). Drive walk, sprint, crouch, jump, punch and dodge from an Animator, using Mixamo clips the owner downloads with their Adobe login. *Check: both levels can be crossed with no sliding feet and nothing clipping through walls.*
-  - `PlayerController` scales `Body` to fake a crouch (line 188). Remove that once the crouch animation is in.
-  - `CoatSkirt` is only on the `Human_Stage` copy so far. Add it to the `Human` prefab.
-  - `PlayerCombat` needs an event for when a punch happens.
-  - Walking is 3 m/s, faster than people naturally walk. Keep the tuned speed and use a hurried half-jog clip.
-  - Footstep sounds fire every 1.7 m at walking speed, but feet land about every 1 m. Play the sound from the animation and leave the noise enemies hear on the current timer, so stealth balance doesn't change.
+- [ ] **H4. Put him in the game.** Built, waiting on the owner's check. **Tools > Put Human In Game** (`HumanGameBuilder`) imports the clips in `Assets/Art/Human/Animations`, builds `Human.controller` and the `Human` prefab, and puts him under `Player/Body` in both levels in place of the capsule. *Check: both levels can be crossed with no sliding feet and nothing clipping through walls.*
+  - Clip speeds are matched to the player's: the walk clip plays at 1.3x for 3 m/s, the sprint at 1.33x for 5.5 m/s, the crouch walk at 1.18x for 1.5 m/s. The roll plays at 1.8x to fit the dodge, and the punch at 1.9x to fit its cooldown.
+  - Dodge and punch (owner, 2026-11-10): the dodge is 0.45 s at 7 m/s (3.2 m) instead of 0.22 s at 11 m/s (2.4 m), so the roll can be seen. Punch reach is 2.5 m instead of 2 m. `HumanGameBuilder` writes these into both scenes. A longer dodge also means a longer window in which an enemy's catch misses.
+  - The crouch walk clip stands much taller than the crouched idle, so `PlayerAnimator` lowers his hips by `crouchWalkDrop` with the feet held in place.
+  - Footstep sounds come from events in the walk and sprint clips. The noise enemies hear still runs on `PlayerNoise`'s stride timer.
+  - `CoatSkirt` hangs toward gravity, so the coat stays down when he leans, and hands back to the body when he tips over in the roll.
+  - `Ducking.fbx` was downloaded but not used. It is removed, and kept in history at commit `3f377fb`.
+  - Don't run **Tools > Build Human Stage** again: it copies `Player/Body` for its capsule, which is now the Human. Delete both tools once this check passes.
   - The top of the hat is at 1.89 m against the 1.8 m controller, so it can clip low ceilings.
 
 ### Decisions
