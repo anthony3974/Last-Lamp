@@ -75,6 +75,17 @@ SAMPLES = 16
 AO_SAMPLES = 64
 AMBIGUOUS_FACING = 0.1
 HOLE_FILL_PASSES = 48
+
+# Coat skirt bones: columns around the body, each an upper and a lower segment. CoatSkirt.cs drives them in Unity.
+SKIRT_COLUMNS = 8
+# The pivot is at the belt. Any lower, and a raised thigh comes out through the cloth right at the hinge.
+SKIRT_PIVOT, SKIRT_MIDDLE, SKIRT_HEM = 1.06, 0.78, 0.515
+SKIRT_TOP_BLEND = 0.04
+SKIRT_MIDDLE_BLEND = 0.07
+BUTTONS_ON_SKIRT_BELOW = 1.05
+# The thighs are always under the coat, and a raised thigh would come through it, so the game mesh leaves them out.
+TROUSERS_HIDDEN_ABOVE = 0.58
+LEG_BONES = ("UpLeg", "Leg", "Foot", "ToeBase", "Buttock")
 SKELETON_SKIPS = ("Eye", "Orbicularis", "Jaw", "Breast", "Buttock", "Root")
 
 
@@ -139,6 +150,89 @@ def face_outward(high, starts, ends):
             bmesh.ops.reverse_faces(mesh, faces=piece)
     mesh.to_mesh(high.data)
     mesh.free()
+
+
+def remove_above(low, height):
+    mesh = bmesh.new()
+    mesh.from_mesh(low.data)
+    bmesh.ops.delete(mesh, geom=[vertex for vertex in mesh.verts if vertex.co.z > height], context="VERTS")
+    mesh.to_mesh(low.data)
+    mesh.free()
+
+
+def smooth(edge0, edge1, x):
+    t = np.clip((x - edge0) / (edge1 - edge0), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def add_skirt_bones(rig, skirt):
+    """Adds the columns of coat bones under the hips, on the surface of the skirt. Returns the skirt's centre in Y."""
+    co = np.empty(len(skirt.data.vertices) * 3)
+    skirt.data.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    centre_y = float(co[:, 1].mean())
+    angles = np.arctan2(co[:, 1] - centre_y, co[:, 0])
+
+    def surface(angle, height):
+        off = np.abs((angles - angle + np.pi) % (2.0 * np.pi) - np.pi)
+        return co[(off < 0.35) & (np.abs(co[:, 2] - height) < 0.015)].mean(axis=0)
+
+    activate(rig)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bones = rig.data.edit_bones
+    hips = bones["mixamorig:Hips"]
+    for column in range(SKIRT_COLUMNS):
+        angle = 2.0 * np.pi * column / SKIRT_COLUMNS
+        top, middle, hem = (surface(angle, height) for height in (SKIRT_PIVOT, SKIRT_MIDDLE, SKIRT_HEM))
+        upper = bones.new(f"CoatSkirt_{column:02d}_Upper")
+        upper.head, upper.tail, upper.parent = top, middle, hips
+        lower = bones.new(f"CoatSkirt_{column:02d}_Lower")
+        lower.head, lower.tail, lower.parent = middle, hem, upper
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return centre_y
+
+
+def weight_to_skirt_bones(low, centre_y, below=None):
+    """Hands the part over from the legs to the coat bones, fading out into the hips above them."""
+    groups = low.vertex_groups
+    for column in range(SKIRT_COLUMNS):
+        for segment in ("Upper", "Lower"):
+            name = f"CoatSkirt_{column:02d}_{segment}"
+            if name not in groups:
+                groups.new(name=name)
+    step = 2.0 * np.pi / SKIRT_COLUMNS
+
+    for vertex in low.data.vertices:
+        x, y, z = vertex.co
+        if below is not None and z >= below:
+            continue
+        kept = {}
+        for entry in vertex.groups:
+            name = groups[entry.group].name
+            if not any(leg in name for leg in LEG_BONES):
+                kept[name] = entry.weight
+        for entry in list(vertex.groups):
+            groups[entry.group].remove([vertex.index])
+
+        total = sum(kept.values()) or 1.0
+        on_skirt = float(smooth(SKIRT_PIVOT + SKIRT_TOP_BLEND, SKIRT_PIVOT - SKIRT_TOP_BLEND, z))
+        on_lower = float(smooth(SKIRT_MIDDLE + SKIRT_MIDDLE_BLEND, SKIRT_MIDDLE - SKIRT_MIDDLE_BLEND, z))
+        around = (np.arctan2(y - centre_y, x) % (2.0 * np.pi)) / step
+        first = int(around) % SKIRT_COLUMNS
+        second = (first + 1) % SKIRT_COLUMNS
+        share = around - int(around)
+
+        result = {name: weight / total * (1.0 - on_skirt) for name, weight in kept.items()}
+        for column, part in ((first, 1.0 - share), (second, share)):
+            for segment, amount in (("Upper", 1.0 - on_lower), ("Lower", on_lower)):
+                result[f"CoatSkirt_{column:02d}_{segment}"] = part * amount * on_skirt
+        for name, weight in result.items():
+            if weight > 0.0:
+                groups[name].add([vertex.index], weight, "REPLACE")
+
+    activate(low)
+    bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=4)
+    bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
 
 
 def make_low(high, target, bones):
@@ -457,6 +551,8 @@ def main():
     starts = np.array([list(rig.matrix_world @ bone.head_local) for bone in skeleton])
     ends = np.array([list(rig.matrix_world @ bone.tail_local) for bone in skeleton])
 
+    skirt_centre = add_skirt_bones(rig, bpy.data.objects["Coat_Skirt"])
+
     lows, atlas_lows, density, reaches, highs = {}, {name: [] for name in ATLASES}, {}, {}, {}
     for name, atlas_name, target, part_density, reach in PARTS:
         high = bpy.data.objects[name]
@@ -467,6 +563,9 @@ def main():
         atlas_lows[atlas_name].append(low)
         density[low.name] = part_density
         reaches[low.name] = reach
+    remove_above(lows["Trousers"], TROUSERS_HIDDEN_ABOVE)
+    weight_to_skirt_bones(lows["Coat_Skirt"], skirt_centre)
+    weight_to_skirt_bones(lows["Coat_Buttons"], skirt_centre, below=BUTTONS_ON_SKIRT_BELOW)
     log("triangles", sum(triangle_count(low.data) for low in lows.values()))
     log({name: triangle_count(low.data) for name, low in lows.items()})
 

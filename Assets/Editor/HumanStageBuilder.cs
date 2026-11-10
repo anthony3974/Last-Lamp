@@ -99,7 +99,8 @@ public static class HumanStageBuilder
     static void ImportModel(Material[] materials)
     {
         var importer = (ModelImporter)AssetImporter.GetAtPath(ModelPath);
-        importer.animationType = ModelImporterAnimationType.Generic;
+        importer.animationType = ModelImporterAnimationType.Human;
+        importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
         importer.importAnimation = false;
         importer.importBlendShapes = false;
         importer.importCameras = false;
@@ -113,6 +114,39 @@ public static class HumanStageBuilder
             importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), material.name), material);
         }
         importer.SaveAndReimport();
+        EnforceTPose(importer);
+    }
+
+    /// <summary>The model's rest pose is an A-pose, so the Avatar is told where a T-pose would put the arms and hands.</summary>
+    static void EnforceTPose(ModelImporter importer)
+    {
+        GameObject model = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath));
+        Transform root = model.transform;
+        foreach (var (side, sign) in new[] { ("Left", -1f), ("Right", 1f) })
+        {
+            var along = new Vector3(sign, 0f, 0f);
+            Aim(Bone(root, side + "Arm"), Bone(root, side + "ForeArm"), along);
+            Aim(Bone(root, side + "ForeArm"), Bone(root, side + "Hand"), along);
+            Aim(Bone(root, side + "Hand"), Bone(root, side + "HandMiddle1"), along);
+            foreach (string finger in new[] { "Index", "Middle", "Ring", "Pinky", "Thumb" })
+            {
+                Vector3 direction = finger == "Thumb" ? new Vector3(sign, 0f, 1f) : along;
+                Aim(Bone(root, $"{side}Hand{finger}1"), Bone(root, $"{side}Hand{finger}2"), direction);
+                Aim(Bone(root, $"{side}Hand{finger}2"), Bone(root, $"{side}Hand{finger}3"), direction);
+            }
+        }
+
+        var bones = root.GetComponentsInChildren<Transform>(true).ToDictionary(bone => bone.name);
+        HumanDescription description = importer.humanDescription;
+        SkeletonBone[] skeleton = description.skeleton;
+        for (int i = 0; i < skeleton.Length; i++)
+        {
+            if (bones.TryGetValue(skeleton[i].name, out Transform bone)) skeleton[i].rotation = bone.localRotation;
+        }
+        description.skeleton = skeleton;
+        importer.humanDescription = description;
+        importer.SaveAndReimport();
+        Object.DestroyImmediate(model);
     }
 
     static void BuildScene()
@@ -165,6 +199,7 @@ public static class HumanStageBuilder
 
         var human = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath), stage);
         human.name = "Human";
+        human.AddComponent<CoatSkirt>();
         LowerArms(human.transform);
 
         EditorSceneManager.SaveScene(stage, ScenePath);
