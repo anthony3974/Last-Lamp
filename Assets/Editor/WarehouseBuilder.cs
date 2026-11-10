@@ -411,44 +411,6 @@ public static class WarehouseBuilder
         Rail("Rail_Right_Far", catwalk, new Vector3(28.5f, Deck, HideCrateZ + 1f), new Vector3(28.5f, Deck, 48.5f));
     }
 
-    [MenuItem("Tools/Move Hide Crate")]
-    static void MoveHideCrate()
-    {
-        Scene scene = SceneManager.GetActiveScene();
-        Transform upper = scene.path == ScenePath ? Root(scene, "Warehouse").transform.Find("Upper Level") : null;
-        Transform crate = upper != null ? upper.Find("Hide_Crate") : null;
-        if (crate == null || Mathf.Approximately(crate.localPosition.z, HideCrateZ))
-        {
-            Debug.LogError($"Move Hide Crate: open {ScenePath} first, or the crate has already been moved.");
-            return;
-        }
-
-        steel = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Warehouse_Rusted_Steel.mat");
-        Transform catwalk = upper.Find("Catwalk");
-
-        crate.localPosition = new Vector3(crate.localPosition.x, crate.localPosition.y, HideCrateZ);
-        PrefabUtility.RecordPrefabInstancePropertyModifications(crate);
-
-        Transform landing = catwalk.Find("Hide_Crate_Landing");
-        landing.localPosition = new Vector3(landing.localPosition.x, landing.localPosition.y, HideCrateZ);
-
-        foreach (Transform column in catwalk.Find("Columns"))
-        {
-            if (Mathf.Approximately(column.localPosition.x, 26.7f))
-                column.localPosition = new Vector3(column.localPosition.x, column.localPosition.y, HideCrateZ);
-        }
-
-        Object.DestroyImmediate(catwalk.Find("Rail_Right_Near").gameObject);
-        Object.DestroyImmediate(catwalk.Find("Rail_Right_Far").gameObject);
-        BuildRailsAroundHideCrate(catwalk);
-        BakeNavMesh(scene);
-
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-        AssetDatabase.SaveAssets();
-        Debug.Log("Move Hide Crate: finished.");
-    }
-
     static void BuildSetPiece(Transform parent)
     {
         Transform piece = Group("Set Piece", parent);
