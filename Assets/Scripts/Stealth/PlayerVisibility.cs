@@ -16,6 +16,7 @@ namespace LastLamp
         [SerializeField] float landingFadeRate = 1f;
 
         PlayerController player;
+        PlayerFlashlight flashlight;
         float movementExposure;
         float landingExposure;
 
@@ -25,6 +26,7 @@ namespace LastLamp
         void Awake()
         {
             player = GetComponent<PlayerController>();
+            flashlight = GetComponentInChildren<PlayerFlashlight>();
         }
 
         void OnEnable() => player.Landed += OnLanded;
@@ -42,7 +44,7 @@ namespace LastLamp
 
             IsInLamp = LampZone.AnyContains(transform.position);
 
-            float target = VisibilityRules.Target(IsInLamp, player.HorizontalSpeed, player.SprintSpeed, player.IsCrouching);
+            float target = VisibilityRules.Target(IsInLamp, player.HorizontalSpeed, player.SprintSpeed, player.IsCrouching, flashlight != null && flashlight.IsBright);
             float rate = target > movementExposure ? riseRate : fallRate;
             movementExposure = Mathf.MoveTowards(movementExposure, target, rate * Time.deltaTime);
 

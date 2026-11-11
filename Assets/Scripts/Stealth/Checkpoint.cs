@@ -23,7 +23,8 @@ namespace LastLamp
         {
             foreach (var checkpoint in Active)
             {
-                if (LampZone.IsInside(checkpoint.transform.position, checkpoint.radius, point)) return checkpoint;
+                Vector3 centre = checkpoint.transform.position;
+                if (LevelRules.SameLevel(centre, point) && LampZone.IsInside(centre, checkpoint.radius, point)) return checkpoint;
             }
             return null;
         }

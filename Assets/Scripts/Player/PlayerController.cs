@@ -33,8 +33,8 @@ namespace LastLamp
         [SerializeField] float minAirTime = 0.15f;
 
         [Header("Dodge")]
-        [SerializeField] float dodgeSpeed = 11f;
-        [SerializeField] float dodgeSeconds = 0.22f;
+        [SerializeField] float dodgeSpeed = 7f;
+        [SerializeField] float dodgeSeconds = 0.45f;
         [SerializeField] float dodgeCooldown = 1.2f;
 
         [Header("Height (metres)")]
@@ -60,6 +60,7 @@ namespace LastLamp
         InputAction interact;
         InputAction attack;
         InputAction dodge;
+        InputAction flashlight;
 
         Vector3 horizontalVelocity;
         Vector3 dodgeDirection;
@@ -74,9 +75,12 @@ namespace LastLamp
         float airTime;
 
         public event Action Landed;
+        public event Action Jumped;
 
         public float HorizontalSpeed => horizontalVelocity.magnitude;
         public float SprintSpeed => sprintSpeed;
+        public float CrouchSpeed => crouchSpeed;
+        public float AirTime => airTime;
         public bool IsCrouching => isCrouching;
         public bool IsSprinting => isSprinting;
         public bool IsAirborne => !controller.isGrounded;
@@ -85,6 +89,7 @@ namespace LastLamp
         // The Interact action has a Hold interaction, but going into hiding has to be instant.
         public bool InteractPressed => interact.WasPressedThisFrame();
         public bool AttackPressed => attack.WasPressedThisFrame();
+        public bool FlashlightHeld => flashlight.IsPressed();
         public bool IsDodging => dodgeTimeLeft > 0f;
         public Vector3 LookDirection => Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
 
@@ -100,6 +105,7 @@ namespace LastLamp
             interact = map.FindAction("Interact", true);
             attack = map.FindAction("Attack", true);
             dodge = map.FindAction("Dodge", true);
+            flashlight = map.FindAction("Flashlight", true);
 
             currentHeight = standHeight;
             yaw = transform.eulerAngles.y;
@@ -185,7 +191,6 @@ namespace LastLamp
 
             controller.height = currentHeight;
             controller.center = Vector3.up * (currentHeight / 2f);
-            body.localScale = new Vector3(1f, currentHeight / standHeight, 1f);
 
             float amount = Mathf.InverseLerp(crouchHeight, standHeight, currentHeight);
             cameraTarget.localPosition = Vector3.up * Mathf.Lerp(crouchCameraHeight, standCameraHeight, amount);
@@ -212,7 +217,11 @@ namespace LastLamp
             if (controller.isGrounded)
             {
                 if (verticalVelocity < 0f) verticalVelocity = -2f;
-                if (jump.WasPressedThisFrame() && !isCrouching) verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
+                if (jump.WasPressedThisFrame() && !isCrouching)
+                {
+                    verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
+                    Jumped?.Invoke();
+                }
             }
             verticalVelocity -= gravity * Time.deltaTime;
             UpdateDodge(wish);
@@ -221,7 +230,12 @@ namespace LastLamp
             controller.Move((flatVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
             TrackLanding();
 
-            if (wish.sqrMagnitude > 0.01f)
+            if (IsDodging)
+            {
+                // A dodge straight back has to turn him at once, or he rolls one way and travels the other.
+                transform.rotation = Quaternion.LookRotation(dodgeDirection);
+            }
+            else if (wish.sqrMagnitude > 0.01f)
             {
                 var facing = Quaternion.LookRotation(wish);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * Time.deltaTime);

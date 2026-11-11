@@ -23,7 +23,9 @@ namespace LastLamp
                 return;
             }
 
-            if (!LampZone.IsInside(transform.position, radius, player.transform.position)) return;
+            Vector3 playerPosition = player.transform.position;
+            if (!LevelRules.SameLevel(transform.position, playerPosition)) return;
+            if (!LampZone.IsInside(transform.position, radius, playerPosition)) return;
 
             finished = true;
             Time.timeScale = 0f;

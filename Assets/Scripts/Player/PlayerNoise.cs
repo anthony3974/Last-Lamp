@@ -4,6 +4,8 @@ namespace LastLamp
 {
     /// <summary>
     /// The player's footsteps and landings, as both sound and noise events, plus knocking loose objects.
+    /// The noise enemies hear runs on the stride timer, so stealth balance doesn't depend on the animation. The footstep
+    /// sound comes from the animation instead, so it lands with his feet.
     /// </summary>
     [RequireComponent(typeof(PlayerController), typeof(AudioSource))]
     public class PlayerNoise : MonoBehaviour
@@ -60,6 +62,11 @@ namespace LastLamp
         void TakeStep()
         {
             Noise.Emit(transform.position, NoiseRules.Footstep(player.IsSprinting, player.IsCrouching));
+        }
+
+        /// <summary>Called by the animation as a foot lands.</summary>
+        public void PlayFootstep()
+        {
             if (footsteps.Length == 0) return;
 
             Play(footsteps[nextFootstep], player.IsSprinting ? sprintVolume : walkVolume);

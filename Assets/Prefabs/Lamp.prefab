@@ -144,7 +144,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6a077b3e3be498dcb28a0fdad56303c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  shape: 0
   radius: 2.6
+  reachBelow: 4.35
+  length: 6
+  nearWidth: 4
+  farWidth: 7
 --- !u!114 &8743600342826416271
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -158,7 +163,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_SerializedVersion: 0
-  m_Size: {x: 6.1, y: 5, z: 6.1}
+  m_Size: {x: 6.2999997, y: 5, z: 6.2999997}
   m_Center: {x: 0, y: -1.85, z: 0}
   m_Area: 3
   m_AffectedAgents: ffffffff
