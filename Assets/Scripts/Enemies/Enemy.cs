@@ -109,6 +109,16 @@ namespace LastLamp
             }
         }
 
+        /// <summary>True while any enemy is in its warning beat or investigating, before a chase.</summary>
+        public static bool AnyNoticing()
+        {
+            foreach (var enemy in Active)
+            {
+                if (enemy.State == EnemyState.Suspicious || enemy.State == EnemyState.Investigate) return true;
+            }
+            return false;
+        }
+
         void TakePunch(Vector3 playerPosition)
         {
             EnemyState before = brain.State;
