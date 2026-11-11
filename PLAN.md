@@ -42,6 +42,7 @@ Playtest result (owner, 2026-11-09): all good, and two monsters was the step the
 - [ ] **17. "This door is blocked" text at the back door (owner, 2026-11-10).** When the player gets close to the blocked back door of `Warehouse_01`, show a short on-screen text box: "This door is blocked." It hides again when they walk away. Plain positioned UI, like the rest of the HUD. *Check: walking up to the door shows the text, walking away hides it, and it never shows anywhere else.*
 - [ ] **18. Checkpoint notification (owner, 2026-11-10).** When the player steps onto a new checkpoint (`Checkpoint.At` finds one that isn't the current one), show a brief on-screen message, such as "Checkpoint reached", that fades after a couple of seconds. Not again for the checkpoint they are already on. Works in both levels. *Check: each checkpoint shows the message once when first reached, and standing on it or coming back to the current one doesn't repeat it.*
 - [ ] **19. Checkpoint near the stairs (owner, 2026-11-10).** Add a checkpoint to `Warehouse_01` in the lit pool nearest the staircase, so a catch on the way up doesn't send the player back to the front. Probably the skylight pool `S1` at about X 18.3, Z 35.8, about 9 m from the stair foot (confirm with the owner). *Check: reaching it, then getting caught, returns the player there, and task 18's message shows when it is reached.*
+- [ ] **23. Make the back door itself green (owner, 2026-11-11).** The blocked back door of `Warehouse_01` (`Back_Door`) is the same rusted steel as the warehouse walls (`Warehouse_Rusted_Steel`), so only its green outline (`Door_Outline_*` on `Highlight_Exit`) marks it. Make the door panel green too, so the exit reads at a glance. The owner remembers it being green once, but every committed version has the door on rusted steel, so that was probably never saved. Like the outline, it must not read as a lit pool: a painted or faintly glowing green, with no light, below bloom. Goes with task 13. *Check: from the front door, the back door reads as the green exit, and it doesn't look like a safe pool.*
 
 ### Combat
 - [ ] **20. Punch sounds (owner, 2026-11-10).** A swing sound on every punch, and a separate hit sound when it lands and stuns an enemy. A punch the enemy shrugs off (stunned too recently) gets a duller sound, so the player can tell it didn't work. `PlayerCombat` already raises `Punched`, and `EnemyBrain.TryStun` already reports whether a punch landed. *Check: a miss, a stun and a shrugged-off punch each sound different.*
@@ -75,74 +76,32 @@ Shape is tuned by named values in the scripts: `MACRO` and `DETAILS` in `body.py
   - `Ducking.fbx` was downloaded but not used. It is removed, and kept in history at commit `3f377fb`.
   - `HumanStageBuilder` and `HumanGameBuilder` are removed now that he is in the game, and kept in git history. Don't bring back **Build Human Stage** as it was: it copies `Player/Body` for its capsule, which is now the Human.
   - The top of the hat is at 1.89 m against the 1.8 m controller, so it can clip low ceilings.
+- [ ] **H5. Look ahead while crouch-walking (owner, 2026-11-11).** When he walks crouched, his head points down, so he isn't looking where he's going. Tilt the head up, so he faces the way he walks. `PlayerAnimator` already lowers his hips during the crouch walk (`crouchWalkDrop`), so the tilt can go there too, as a head look-at or a bone tilt that fades in with the crouch walk. *Check: crouch-walking, his face points ahead rather than at the floor, and standing up blends back with no snap.*
 
 ### Realistic monster (the Wick)
-The design model is approved and kept in `Art/Wick`, outside `Assets` so Unity doesn't import it yet: `wick.blend`, `wick.py` (the Blender script that builds it) and `wick_design_sheet.png`. `Assets/Scenes/MonsterStage_01` is the room for trying it in, with a `Monster Spot` to put it under. Delete `Assets/Editor/MonsterStageBuilder.cs` once that scene is confirmed.
+The design model is approved and kept in `Art/Wick`, outside `Assets` so Unity doesn't import it yet: `wick.blend`, `wick.py` (the Blender script that builds it) and `wick_design_sheet.png`. `Assets/Scenes/MonsterStage_01` is the room for trying it in, with a `Monster Spot` to put it under. The scene is confirmed (owner, 2026-11-11), and `MonsterStageBuilder` has been removed. It is kept in git history.
 
-- [ ] **M1. Make the Wick game-ready.** It is a design model now: about 190,000 triangles, with no UVs, baked textures or rig. Build a lower-poly mesh (about 25,000 triangles, like the human's 28,625, since two can be on screen), UV it, bake the skin, char and surface detail from the sculpt into textures for URP, and give it a humanoid rig so ready-made clips can drive it. Clips needed: idle, walk (patrol), run (chase), grab (the 0.6 s wind-up and catch), stunned (2.5 s), and ideally a look-around for Search. Scripted in Blender like the human (Blender 5.2 is installed). Keep the seam and spine glands as one separate mesh using `Monster_Alert`, so `Enemy` can colour it through its `Alert Light` reference. Optional: a better face, the weakest part up close. *Check: under `Monster Spot` in `MonsterStage_01`, it reads as the design sheet does in lamp light and by flashlight, and the seam changes colour with each state.*
-- [ ] **M2. Put the Wick in the game.** Replace the capsule on the monsters in both levels (`Corridor_01` and `Warehouse_01`). Its arms span about 1.05 m against the agent's 0.9 m, and its head reaches 0.65 m forward of the agent's centre, so pull the arms in or widen the agent. Widening it means rebaking the NavMesh in both levels, `Lit` areas included. Build a Wick prefab and a small animator script that plays walk or run from the agent's speed and grab or stunned from `EnemyState`. Its seam becomes the `Alert Light`, and the sphere above the head goes. *Check: it patrols and chases both levels with no visible clipping through walls, and each state plays the right clip.*
+To rebuild the game version (Blender 5.2), run these in order:
 
-Open decisions for the owner, before M1 starts:
-- Where the clips come from: Mixamo clips the owner downloads, as for the human (recommended), or clips built in Blender.
-- The long arms: pull them in, or widen the agent and rebake.
-- Whether `MonsterStage_01` is confirmed, so `MonsterStageBuilder` can be deleted.
+```
+blender -b --python Art/Wick/game.py               # Wick.fbx and textures in Assets/Art/Wick, and Art/Wick/game.blend
+blender -b --python Art/Wick/sheet.py              # game_sheet.png, the design sheet's views of the game version
+blender -b --python Art/Wick/sheet.py -- --poses   # pose_sheet.png, the rig bent into a grab and a stride to check the weights
+```
 
-### Decisions
-- **The human (owner, 2026-11-09).** A noir man in a top hat with a dark red band, sitting just above the brows; a belted double-breasted trench coat to the knee; white shirt, striped tie, leather gloves, matte dress shoes; dark hair down to the collar at the back. The body and face come from MPFB and the animation from Mixamo; everything else is scripted. Don't use the `game-human` or `game-human-advanced` worktrees as references for this version.
-- **The Wick (owner, 2026-11-09).** The realistic monster is a starved, hunched creature burned by light: wet ashen skin, with hands, forearms and feet charred black. It is 1.95 m tall with its eyes at 1.7 m, matching the height `Enemy` sees from. Its long arms hang almost to the shins to suit the 1.4 m catch reach. A glowing seam down the breastbone and glands down the spine replace the sphere above the head as the warning cue, so it reads from the front and the back.
-- **Light rule (owner, 2026-11-08).** Enemies are creatures of the dark and fear light. They won't enter a lit pool, so lamps are true safety and the dark is where the danger is. Visibility measures how exposed the player is in the dark.
-- **Light doesn't stop a chase (owner, 2026-11-09).** Standing in a pool to shake off a chasing enemy felt like cheating. An enemy already in Chase now follows the player into lit pools and doesn't give up at the edge. Every other state still stays out of the light. This replaces the wait at the edge described in task 9.
-- **Lit pools are a NavMesh area (2026-11-09).** With two monsters, the carving NavMesh Obstacle from task 9 would open a pool for every monster at once. Each pool is now a `Lit` area in the baked NavMesh, and each monster allows or forbids that area for itself. A lamp that goes out will need a NavMesh rebake to open its pool.
-- **Getting caught (2026-11-09, starting values, open to change).** A chasing enemy in reach winds up for 0.6 s, with a white light and a sound, so the player can react. A catch costs one of 3 lives and returns the player to the last checkpoint touched; losing the last life refills them and returns to the first checkpoint. A punch stuns for 2.5 s and can't land again for 6 s, so an enemy can't be stun-locked. A dodge moves the player out of reach.
-- **Third-person camera behind the player (owner, 2026-11-08).** The player can see their own shadow and nearby enemies, and it suits Arkham-style combat later.
-- **Corridor layout (owner, 2026-11-08).** 6 m wide with lamps on alternating walls, so an enemy has a dark lane about 2.4 m wide past each pool. With lamps in the middle, a pool would fill the corridor and trap the enemy in one gap.
-- **Flashlight (owner, 2026-11-09).** The player carries a small dim flashlight that points where they look. It is for seeing by and doesn't change exposure.
-- **Bright flashlight (owner, 2026-11-10).** Holding F makes the flashlight brighter and further reaching, but adds 0.5 exposure, even inside a lamp pool, so enemies notice the player faster. It goes out while hiding.
-- **Street car (owner, 2026-11-10).** The real `Car.prefab` (from `game-car`) replaces the graybox car on the street outside `Warehouse_01`. It is a static prop: one box collider, all parts on the `VisionBlocker` layer, no driving. It sits outside the baked NavMesh volume, so no rebake is needed.
-- **PC first (owner, 2026-11-08).** Mobile is secondary and may never ship. If it comes back, it needs touch controls and a new lighting pass, because the Mobile profile has lamp shadows off. Baking the lamps is the likely fix, but baked lamps can't go out and characters don't throw shadows from them.
+Each part's triangle budget is in `PARTS` in `game.py`. The Unity import (Humanoid, the `Wick_Skin` material, the seam on `Monster_Alert`) was set up by a one-off **Tools > Put Wick On Stage**, which also put the Wick under `Monster Spot` in `MonsterStage_01` with `AlertPreview` stepping the seam through every state every 2 s. It was removed before it was committed, so it is not in git history. Its settings are kept in the `.meta` files, and `WickGameBuilder` now sets the T-pose.
 
-### Not in this list
-Menus, saving, final art, bosses, the calmer stealth path, dodge-and-counter combat, the final controller layout (current buttons are a placeholder), and anything for mobile. Pick these up after task 12 shows the corridor is fun.
-
-## Game idea: Noir horror stealth (working concept)
-
-**Pitch:** A Spider-Man-noir-style horror game, but not a Spider-Man game. No swinging. You walk through the dark trying to reach the other side while enemies hunt you.
-
-**Core focus:** Sneaking first, with combat as the backup.
-- Horror comes from feeling vulnerable and hunted.
-- Getting caught is a consequence, not a scripted requirement.
-- Every encounter should be solvable by stealth if the player is good enough, ideally even boss moments (still undecided).
-- A clean stealth run could unlock a calmer, different path.
-
-**Design goals (from the owner's frustration with other games):**
-- No forced detection. Stealth must be a real option.
-- Clear visual cue for how visible the player is.
-- A warning beat before enemies fully spot you.
-- Hiding spots to recover when things go wrong.
-
-**Mechanics:**
-- Pools of light are safe zones, dark stretches are risky.
-- Enemies fear light and won't enter it unless they are already chasing the player. They hunt the dark with simple vision and hearing.
-- Combat starts tiny: one punch, one dodge, one enemy type. It can grow into an Arkham-style dodge and counter later.
-
-**Why it's feasible:**
-- Unity's lighting suits noir.
-- A few moody corridors run lighter than a big open city, which leaves room for real-time shadows on PC.
-
-**Open questions:**
-- Fully stealthable through boss encounters?
-- What exactly gets the player caught in other games (spotting too fast, unclear light, no escape)?
-
-## Rules
-
-### Building things
-- **Build things in the scene hierarchy, not in code.** Menus, buildings, vehicles, anything visible are real objects in the scene or a prefab, so the owner can edit them. Scripts hold references and run the behaviour.
-- The usual way: a one-off Tools menu script that builds the objects, then is deleted (kept in git history).
-- Plain positioned UI, no layout groups unless asked.
-- **Every button is a copy of one shared UI button prefab.** Change only the name, place, size and text on a copy; restyle in the prefab. The prefab doesn't exist yet; make it when the first button is needed.
-
-### Working in this project
-- Each bug fix gets its own commit, so the history shows it as a fix.
-
-### Releasing
-- Change only Project Settings > Player > Version. The Android version code is set from it on every Android build. This needs `Assets/Editor/AndroidVersionCode.cs` from Farming-Simulator-94, which is not in this project yet. Only add it if Android ships.
+- [x] **M1. Make the Wick game-ready.** Passed by the owner, 2026-11-11. It is a design model now: about 190,000 triangles, with no UVs, baked textures or rig. Build a lower-poly mesh (about 25,000 triangles, like the human's 28,625, since two can be on screen), UV it, bake the skin, char and surface detail from the sculpt into textures for URP, and give it a humanoid rig so ready-made clips can drive it. Clips needed: idle, walk (patrol), run (chase), grab (the 0.6 s wind-up and catch), stunned (2.5 s), and ideally a look-around for Search. Scripted in Blender like the human (Blender 5.2 is installed). Keep the seam and spine glands as one separate mesh using `Monster_Alert`, so `Enemy` can colour it through its `Alert Light` reference. Optional: a better face, the weakest part up close. *Check: under `Monster Spot` in `MonsterStage_01`, it reads as the design sheet does in lamp light and by flashlight, and the seam changes colour with each state.*
+  - Built in Blender (2026-11-11): 24,900 triangles. The body has 21,500 and the claws, teeth and eyes 2,500, all on one 4096 skin atlas (`Wick_Skin`). The seam and glands are a separate 900-triangle mesh, `Wick_Alert`, on `Monster_Alert`. `game_sheet.png` matches the design sheet's views. `pose_sheet.png` bends the rig into a grab and a stride to show the weights hold.
+  - The spine glands were buried about 1 cm under the skin in the design (`wick.py` places them before it raises the spine knuckles), so they never showed, even on the design sheet. `game.py` lifts each one onto the skin and makes it 1.5 times larger (`GLAND_SCALE`, `GLAND_RAISE`). `game_sheet.png` has an extra lamp-lit view from behind to show them. `wick.py` and the design sheet are unchanged.
+  - The rig uses Mixamo bone names, with fingers but no jaw: the teeth and eyes follow the head. Bone heat weights only solve at 10 times the size, so `game.py` scales up for that step.
+  - The body is unwrapped by seams, one island per body part, with seams on the back or underneath. Smart project broke the bumpy sculpt into thousands of single-triangle islands.
+- [ ] **M2. Put the Wick in the game.** Replace the capsule on the monsters in both levels (`Corridor_01` and `Warehouse_01`). Its arms span about 1.05 m against the agent's 0.9 m, and its head reaches 0.65 m forward of the agent's centre, so widen the agent (owner, 2026-11-11) and rebake the NavMesh in both levels, `Lit` areas included. Build a Wick prefab and a small animator script that plays walk or run from the agent's speed and grab or stunned from `EnemyState`. Its seam becomes the `Alert Light`, and the sphere above the head goes. *Check: it patrols and chases both levels with no visible clipping through walls, and each state plays the right clip.*
+  - Built 2026-11-11 by **Tools > Put Wick In Game** (`WickGameBuilder`), which is safe to run again. The owner ran it: the Wick is in both levels and the animations look good. One thing is still open, below: the legs look stiff when it walks. Delete `WickGameBuilder` when M2 passes, and keep it in git history.
+  - Clips in `Assets/Art/Wick/Animations`, from the owner's Mixamo downloads: `Idle` (Monster Idle), `Walk` (Walking), `Run` (mutant run), `Grab` (mutant swiping, the wind-up to the swipe), `Stunned` and `LookAround` (Looking Around). The owner keeps the original downloads in `~/Downloads/creature`.
+  - Mixamo files import at twice the size (hips 2 m up), so clip speeds were measured at the Wick's leg length (hips 1.06 m up). On the Wick the walk covers 1.23 m/s and the run 2.31 m/s. The locomotion blend plays the walk at 1.46x for patrol, the run at 1.21x for investigate and 2.08x for chase, so the feet don't slide. If the chase looks too frantic, swap the run clip or lower the chase speed.
+  - The grab clip plays the wind-up and swipe in the 0.6 s grab, and the stunned clip is sped up to fit the 2.5 s stun. The look-around plays on the head only, during Search, while the legs walk.
+  - The walk looked stiff (owner, 2026-11-11): the walk clip is upright, so the Wick lost its hunch and walked with a rigid torso. `WickAnimator` now bends the spine 21 degrees forward (`hunch`) at walking pace. The bend fades out toward standing still and toward running, because `Monster Idle` and the mutant run are hunched already, and it goes during the grab. The arms still swing very little, because the clip barely swings them. The hunch is good (owner, 2026-11-11).
+  - **Open (owner, 2026-11-11):** the Wick's legs still look a little stiff when it walks. The walk clip keeps the knees fairly straight, and it plays at 1.46x to match the patrol speed. Options: a Mixamo walk with more knee bend (`mutant walking` in `~/Downloads/creature` renders much the same, so probably not that one), a slower patrol so the clip plays nearer 1x, or a small knee bend added in `WickAnimator` like the hunch.
+  - The Avatar's T-pose now has the spine straight up, because the mutant clips are already hunched and would otherwise add their lean to the modelled one. The neck and head keep their modelled angle to the chest.
+  - The agent radius is 0.55 m in the NavMesh settings and on every monster, and `LampZone` widens each `Lit` area by 0.55 m instead of 0.45 m, so the arms stay out of the light. The tool rebakes both levels and warns in the Console if any patrol route no longer joins up outside the light. The warehouse catwalks are 1.5 m wide, which leaves the agent a strip about 0.4 m wide.
