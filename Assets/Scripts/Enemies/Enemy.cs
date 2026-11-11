@@ -52,13 +52,13 @@ namespace LastLamp
         [SerializeField] float searchRadius = 4f;
 
         [Header("Alert Light")]
-        [ColorUsage(false, true)] [SerializeField] Color patrolColour = new Color(0.3f, 0.3f, 0.3f);
-        [ColorUsage(false, true)] [SerializeField] Color suspiciousColour = new Color(5f, 3.5f, 0f);
-        [ColorUsage(false, true)] [SerializeField] Color investigateColour = new Color(5f, 1.5f, 0f);
-        [ColorUsage(false, true)] [SerializeField] Color chaseColour = new Color(8f, 0f, 0f);
-        [ColorUsage(false, true)] [SerializeField] Color searchColour = new Color(0.8f, 0.8f, 4f);
-        [ColorUsage(false, true)] [SerializeField] Color attackColour = new Color(10f, 10f, 10f);
-        [ColorUsage(false, true)] [SerializeField] Color stunnedColour = new Color(0f, 4f, 0.5f);
+        [ColorUsage(false, true)] [SerializeField] Color patrolColour = AlertColours.Patrol;
+        [ColorUsage(false, true)] [SerializeField] Color suspiciousColour = AlertColours.Suspicious;
+        [ColorUsage(false, true)] [SerializeField] Color investigateColour = AlertColours.Investigate;
+        [ColorUsage(false, true)] [SerializeField] Color chaseColour = AlertColours.Chase;
+        [ColorUsage(false, true)] [SerializeField] Color searchColour = AlertColours.Search;
+        [ColorUsage(false, true)] [SerializeField] Color attackColour = AlertColours.Attack;
+        [ColorUsage(false, true)] [SerializeField] Color stunnedColour = AlertColours.Stunned;
 
         static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
