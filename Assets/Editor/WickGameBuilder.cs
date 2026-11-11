@@ -192,6 +192,11 @@ public static class WickGameBuilder
         controller.AddParameter("Attacking", AnimatorControllerParameterType.Bool);
         controller.AddParameter("Stunned", AnimatorControllerParameterType.Bool);
 
+        // WickAnimator lowers the hips during the walk in OnAnimatorIK, which only runs with the IK pass on.
+        AnimatorControllerLayer[] layers = controller.layers;
+        layers[0].iKPass = true;
+        controller.layers = layers;
+
         AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
         var tree = new BlendTree
