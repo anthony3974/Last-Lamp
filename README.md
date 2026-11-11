@@ -30,7 +30,7 @@ The level ends at a marker in the far yard, where you can restart. See [PLAN.md]
 | Sprint | Q |
 | Crouch (hold) | Left Shift |
 | Jump | Space |
-| Hide, leave hiding spot, restart | E |
+| Hide, leave hiding spot, open or close a door, restart | E |
 | Punch | Left mouse |
 | Dodge | Right mouse |
 
