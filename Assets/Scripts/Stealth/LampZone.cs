@@ -17,7 +17,8 @@ namespace LastLamp
     /// </summary>
     public class LampZone : MonoBehaviour
     {
-        const float EnemyBodyRadius = 0.45f;
+        // The Wick's arms hang about 0.53 m out from its middle. Matches the enemies' NavMesh agent radius.
+        const float EnemyBodyRadius = 0.55f;
         const float ReachAbove = 0.65f;
 
         static readonly List<LampZone> Active = new List<LampZone>();
