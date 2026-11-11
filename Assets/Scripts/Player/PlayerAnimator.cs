@@ -24,11 +24,22 @@ namespace LastLamp
         [Tooltip("How far the hips drop while crouch-walking, in metres. The clip stands much taller than the crouched idle.")]
         [SerializeField] float crouchWalkDrop = 0.25f;
 
+        [Header("Look ahead while crouch-walking")]
+        [Tooltip("The crouch-walk clip looks at the floor. This turns the head up toward a point this far ahead, in metres, at head height.")]
+        [SerializeField] float lookAheadDistance = 4f;
+        [Tooltip("How much the head turns to look ahead, 0 to 1.")]
+        [Range(0f, 1f)] [SerializeField] float lookAheadHead = 1f;
+        [Tooltip("How much the upper body helps the head look ahead, 0 to 1. Keep it low so the crouch still reads.")]
+        [Range(0f, 1f)] [SerializeField] float lookAheadBody = 0.15f;
+        [Tooltip("How long the head takes to come up or go back down, in seconds, so standing up blends with no snap.")]
+        [SerializeField] float lookAheadFade = 0.25f;
+
         Animator animator;
         PlayerController player;
         PlayerCombat combat;
         PlayerNoise noise;
         bool wasDodging;
+        float lookAhead;
 
         void Awake()
         {
@@ -62,6 +73,9 @@ namespace LastLamp
 
             if (player.IsDodging && !wasDodging) animator.SetTrigger(Dodge);
             wasDodging = player.IsDodging;
+
+            float target = CrouchWalkAmount(player.IsCrouching, animator.GetFloat(Speed), player.CrouchSpeed);
+            lookAhead = FadeTowards(lookAhead, target, lookAheadFade, Time.deltaTime);
         }
 
         void OnAnimatorIK(int layerIndex)
@@ -69,12 +83,31 @@ namespace LastLamp
             if (layerIndex != 0) return;
 
             float drop = HipDrop(player.IsCrouching, animator.GetFloat(Speed), player.CrouchSpeed, crouchWalkDrop);
+            LookAhead();
             if (drop <= 0f) return;
 
             // Lower the body while the feet stay where the clip put them, so the knees bend instead of the feet sinking.
             PinFoot(AvatarIKGoal.LeftFoot);
             PinFoot(AvatarIKGoal.RightFoot);
             animator.bodyPosition += Vector3.down * drop;
+        }
+
+        // Turns the head up from the floor toward a point ahead at head height, faded in with the crouch walk.
+        void LookAhead()
+        {
+            if (lookAhead <= 0f)
+            {
+                animator.SetLookAtWeight(0f);
+                return;
+            }
+
+            Transform head = animator.GetBoneTransform(HumanBodyBones.Head);
+            if (head == null) return;
+
+            Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+            // The bones still hold last frame's final pose here, hip drop included, which is close enough for a point metres away.
+            animator.SetLookAtPosition(head.position + forward * lookAheadDistance);
+            animator.SetLookAtWeight(lookAhead, lookAheadBody, lookAheadHead, 0f, 0.5f);
         }
 
         void PinFoot(AvatarIKGoal foot)
@@ -91,7 +124,20 @@ namespace LastLamp
 
         internal static float HipDrop(bool crouching, float speed, float crouchSpeed, float maxDrop)
         {
-            return crouching ? maxDrop * Mathf.Clamp01(speed / crouchSpeed) : 0f;
+            return maxDrop * CrouchWalkAmount(crouching, speed, crouchSpeed);
+        }
+
+        /// <summary>0 when standing or crouched and still, rising to 1 at full crouch-walking speed.</summary>
+        internal static float CrouchWalkAmount(bool crouching, float speed, float crouchSpeed)
+        {
+            return crouching ? Mathf.Clamp01(speed / crouchSpeed) : 0f;
+        }
+
+        /// <summary>Moves toward the target at a rate that covers the whole 0 to 1 range in fadeTime seconds.</summary>
+        internal static float FadeTowards(float current, float target, float fadeTime, float deltaTime)
+        {
+            if (fadeTime <= 0f) return target;
+            return Mathf.MoveTowards(current, target, deltaTime / fadeTime);
         }
     }
 }
