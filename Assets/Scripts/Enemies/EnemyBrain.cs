@@ -69,6 +69,19 @@ namespace LastLamp
             return true;
         }
 
+        /// <summary>Forgets the player completely and goes back to patrolling, as at the start of the level.</summary>
+        public void Reset()
+        {
+            meter.Reset();
+            playerWasHidden = false;
+            sawPlayerLastTick = false;
+            watchedPlayerHide = false;
+            secondsSinceStun = StunImmunitySeconds;
+            CaughtPlayer = false;
+            LastKnownPosition = Vector3.zero;
+            Enter(EnemyState.Patrol);
+        }
+
         public void Tick(in EnemySenses rawSenses, float deltaTime)
         {
             CaughtPlayer = false;

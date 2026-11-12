@@ -318,6 +318,29 @@ namespace LastLamp.Tests
         }
 
         [Test]
+        public void AResetEnemyForgetsTheChaseAndMustNoticeThePlayerAfresh()
+        {
+            var brain = BrainInChase();
+
+            brain.Reset();
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Patrol));
+
+            brain.Tick(SeenInTheDark(), 10f);
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Suspicious));
+        }
+
+        [Test]
+        public void AResetEnemyCanBeStunnedStraightAway()
+        {
+            var brain = BrainInChase();
+            Assert.That(brain.TryStun(Vector3.zero), Is.True);
+
+            brain.Reset();
+
+            Assert.That(brain.TryStun(Vector3.zero), Is.True);
+        }
+
+        [Test]
         public void AfterHidingUnseenTheEnemyKeepsGoingUntilItReachesWhereItLostThePlayer()
         {
             var brain = BrainInChase();

@@ -76,6 +76,8 @@ namespace LastLamp
         int routeIndex;
         int routeDirection = 1;
         float pauseLeft;
+        Vector3 startPosition;
+        Quaternion startRotation;
 
         public EnemyState State => brain.State;
 
@@ -85,18 +87,41 @@ namespace LastLamp
             voice = GetComponent<AudioSource>();
             alertBlock = new MaterialPropertyBlock();
             litAreaMask = 1 << NavMesh.GetAreaFromName(LitArea);
+            startPosition = transform.position;
+            startRotation = transform.rotation;
         }
 
         void OnEnable()
         {
             Active.Add(this);
             Noise.Emitted += Hear;
+            lives.Caught += OnPlayerCaught;
         }
 
         void OnDisable()
         {
             Active.Remove(this);
             Noise.Emitted -= Hear;
+            lives.Caught -= OnPlayerCaught;
+        }
+
+        // Every catch sends the player back to a checkpoint, so every monster starts over too:
+        // back where it stood when the level began, at the start of its route, with no memory of the player.
+        void OnPlayerCaught(bool outOfLives)
+        {
+            brain.Reset();
+            heardNoise = false;
+            routeIndex = 0;
+            routeDirection = 1;
+            pauseLeft = 0f;
+            hasDestination = false;
+
+            agent.Warp(startPosition);
+            agent.ResetPath();
+            agent.isStopped = false;
+            transform.rotation = startRotation;
+            agent.areaMask = NavMesh.AllAreas & ~litAreaMask;
+            ShowAlertColour();
         }
 
         void Start() => ShowAlertColour();
