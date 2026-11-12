@@ -8,21 +8,16 @@ namespace LastLamp
     /// <summary>
     /// Shows the <see cref="TutorialPrompt"/> children of this object on the HUD, one at a time and each once per
     /// launch of the game, so restarting the level or getting caught doesn't repeat them. Keys come from the input
-    /// bindings, so the text stays right if a binding changes.
+    /// bindings, so the text stays right if a binding changes. The player and the HUD's tutorial panel are in the Main
+    /// scene, so they are found when the level loads.
     /// </summary>
     public class Tutorial : MonoBehaviour
     {
         static readonly HashSet<string> SeenThisLaunch = new HashSet<string>();
+        static readonly List<Tutorial> Active = new List<Tutorial>();
 
         [Header("References")]
         [SerializeField] InputActionAsset actions;
-        [SerializeField] PlayerController player;
-        [SerializeField] PlayerCombat combat;
-        [SerializeField] PlayerHiding hiding;
-        [SerializeField] PlayerLives lives;
-        [SerializeField] PlayerFlashlight flashlight;
-        [SerializeField] GameObject panel;
-        [SerializeField] Text label;
 
         [Header("Timing (seconds)")]
         [Tooltip("Each prompt stays up at least this long, even when its task is already done.")]
@@ -32,6 +27,14 @@ namespace LastLamp
 
         [Tooltip("The control scheme whose keys are shown.")]
         [SerializeField] string controlScheme = "Keyboard&Mouse";
+
+        PlayerController player;
+        PlayerCombat combat;
+        PlayerHiding hiding;
+        PlayerLives lives;
+        PlayerFlashlight flashlight;
+        GameObject panel;
+        Text label;
 
         TutorialPrompt[] prompts;
         readonly Dictionary<string, TutorialPrompt> promptById = new Dictionary<string, TutorialPrompt>();
@@ -54,8 +57,19 @@ namespace LastLamp
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetSeen() => SeenThisLaunch.Clear();
 
+        /// <summary>True while a level with a tutorial is loaded.</summary>
+        public static bool InLevel => Active.Count > 0;
+
         void Awake()
         {
+            player = PlayerController.Current;
+            combat = player.GetComponent<PlayerCombat>();
+            hiding = player.GetComponent<PlayerHiding>();
+            lives = player.GetComponent<PlayerLives>();
+            flashlight = player.GetComponentInChildren<PlayerFlashlight>();
+            panel = Hud.Current.TutorialPanel;
+            label = Hud.Current.TutorialLabel;
+
             prompts = GetComponentsInChildren<TutorialPrompt>();
             foreach (var prompt in prompts) promptById[Id(prompt)] = prompt;
             queue = new TutorialQueue(SeenThisLaunch, minSeconds, awaySeconds);
@@ -63,6 +77,7 @@ namespace LastLamp
 
         void OnEnable()
         {
+            Active.Add(this);
             player.Jumped += OnJumped;
             combat.Punched += OnPunched;
             lives.Caught += OnCaught;
@@ -70,14 +85,19 @@ namespace LastLamp
 
         void OnDisable()
         {
+            Active.Remove(this);
             player.Jumped -= OnJumped;
             combat.Punched -= OnPunched;
             lives.Caught -= OnCaught;
+
+            // The panel is in the Main scene, so it would stay up after this level unloads.
+            if (panel != null) panel.SetActive(false);
         }
 
         void Start()
         {
-            startCheckpoint = Checkpoint.At(player.transform.position);
+            Level level = Level.In(gameObject.scene);
+            startCheckpoint = level != null ? level.FirstCheckpoint : Checkpoint.At(player.transform.position);
             Show(null);
         }
 

@@ -10,10 +10,12 @@ PC is the main platform. Mobile may come later.
 
 Early prototype with two levels. The levels are still mostly plain shapes, but the player and the monster are finished models.
 
+The `Main` scene holds everything the levels share: the player, the camera, the HUD and the night's light and sky. Each level is a scene of its own that loads alongside `Main` in the background, so a level can be edited without touching the others. Areas can also be joined into one world, where the next area loads as you approach it (two at a time), so you cross with no break. None are joined yet.
+
 - `Corridor_01`, the tutorial: a corridor with an open yard at each end under a night sky. On-screen prompts teach the controls in the start yard, then the rules in the first stretch of the corridor. Two monsters patrol it. It ends at a marker in the far yard: the game freezes on "YOU MADE IT" for 2 seconds, then the warehouse loads.
 - `Warehouse_01`: a two-storey warehouse with four monsters, stairs up to a catwalk, light from skylights and windows, and an old wooden front door you can open. The back door is blocked; for now the level ends at a test marker outside the upper window, where you can restart.
 
-Play starts in the corridor and carries on into the warehouse, with fresh lives. You can also open either level on its own.
+Play starts in the corridor and carries on into the warehouse, with fresh lives. You can also start in either level.
 
 Working so far:
 - Third-person player, a realistic human in a long coat: walk, sprint, crouch and jump, with a camera that stays out of walls.
@@ -48,7 +50,9 @@ Controller buttons are placeholders and haven't been tested.
 1. Install Unity 6000.0.85f1 through Unity Hub.
 2. Clone this repository.
 3. In Unity Hub, choose **Add project from disk** and select the cloned folder.
-4. Open `Assets/Scenes/Corridor_01` (or `Warehouse_01`) and press **Play**. Press **Esc** to free the mouse.
+4. Open `Assets/Scenes/Main` and press **Play** to play from the start. Press **Esc** to free the mouse.
+
+Pressing **Play** with a level open, such as `Corridor_01` or `Warehouse_01`, starts the game in that level. On its own, a level has no camera, moonlight or colour grading; to edit it with the game's look, also open `Main` (right-click it > **Open Scene Additive**).
 
 On Linux with Intel graphics, launch the editor with `-force-vulkan`: OpenGL draws red noise.
 

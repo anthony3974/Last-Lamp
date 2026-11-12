@@ -74,6 +74,12 @@ namespace LastLamp
         bool isSprinting;
         float airTime;
 
+        /// <summary>
+        /// The player, who lives in the Main scene. Things in a level scene can't link to another scene, so they find
+        /// the player here when they wake.
+        /// </summary>
+        public static PlayerController Current { get; private set; }
+
         public event Action Landed;
         public event Action Jumped;
 
@@ -95,6 +101,7 @@ namespace LastLamp
 
         void Awake()
         {
+            Current = this;
             controller = GetComponent<CharacterController>();
             map = actions.FindActionMap("Player", true);
             move = map.FindAction("Move", true);
@@ -122,6 +129,11 @@ namespace LastLamp
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        void OnDestroy()
+        {
+            if (Current == this) Current = null;
         }
 
         void Update()
@@ -161,6 +173,16 @@ namespace LastLamp
             airTime = 0f;
             PlaceAt(position);
             CinemachineCore.OnTargetObjectWarped(cameraTarget, jump);
+        }
+
+        /// <summary>Puts the player on a level's start, facing its way and looking straight ahead, as the level begins.</summary>
+        public void StartAt(Vector3 position, Quaternion facing)
+        {
+            yaw = facing.eulerAngles.y;
+            pitch = 0f;
+            transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            cameraTarget.rotation = Quaternion.Euler(pitch, yaw, 0f);
+            Respawn(position);
         }
 
         void PlaceAt(Vector3 position)

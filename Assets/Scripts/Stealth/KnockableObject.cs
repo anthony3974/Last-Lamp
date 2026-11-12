@@ -22,11 +22,15 @@ namespace LastLamp
         Rigidbody body;
         AudioSource audioSource;
         float nextNoiseTime;
+        float settledAt;
 
         void Awake()
         {
             body = GetComponent<Rigidbody>();
             audioSource = GetComponent<AudioSource>();
+            // Counted from when this object's level loads. Levels load alongside the Main scene, so the time since
+            // the last scene load doesn't restart with them.
+            settledAt = Time.time + SettleSeconds;
         }
 
         public void Knock(Vector3 direction, float playerSpeed)
@@ -40,7 +44,7 @@ namespace LastLamp
 
         void OnCollisionEnter(Collision collision)
         {
-            if (Time.timeSinceLevelLoad < SettleSeconds) return;
+            if (Time.time < settledAt) return;
             if (collision.relativeVelocity.magnitude >= minImpactSpeed) MakeNoise();
         }
 

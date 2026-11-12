@@ -6,15 +6,16 @@ namespace LastLamp
 {
     /// <summary>
     /// Being caught costs a life and returns the player to their last checkpoint.
-    /// Running out of lives refills them and sends the player back to the first checkpoint.
+    /// Running out of lives refills them and sends the player back to the level's first checkpoint.
+    /// The level sets its first checkpoint when it loads (<see cref="StartLevel"/>).
     /// </summary>
     [RequireComponent(typeof(PlayerController))]
     public class PlayerLives : MonoBehaviour
     {
-        [SerializeField] Checkpoint firstCheckpoint;
         [SerializeField] int maxLives = 3;
 
         PlayerController player;
+        Checkpoint firstCheckpoint;
         Checkpoint current;
         readonly HashSet<Checkpoint> reachedBefore = new HashSet<Checkpoint>();
 
@@ -29,9 +30,26 @@ namespace LastLamp
         void Awake()
         {
             player = GetComponent<PlayerController>();
-            current = firstCheckpoint;
             Lives = maxLives;
-            if (firstCheckpoint != null) reachedBefore.Add(firstCheckpoint);
+        }
+
+        /// <summary>A new level begins: full lives, standing on its first checkpoint, which counts as reached.</summary>
+        public void StartLevel(Checkpoint first)
+        {
+            Lives = maxLives;
+            reachedBefore.Clear();
+            firstCheckpoint = first;
+            current = first;
+            if (first != null) reachedBefore.Add(first);
+        }
+
+        /// <summary>
+        /// The player walked into the next area of a joined world. Lives carry on. Its first checkpoint is now where losing
+        /// the last life sends them, and where a catch sends them once the area with their checkpoint has unloaded.
+        /// </summary>
+        public void EnterArea(Checkpoint first)
+        {
+            if (first != null) firstCheckpoint = first;
         }
 
         void Update()
@@ -56,7 +74,9 @@ namespace LastLamp
                 current = firstCheckpoint;
             }
 
-            player.Respawn(current.Position);
+            // In a joined world, the area that held the checkpoint may have unloaded behind the player.
+            if (current == null) current = firstCheckpoint;
+            if (current != null) player.Respawn(current.Position);
             Caught?.Invoke(outOfLives);
         }
     }

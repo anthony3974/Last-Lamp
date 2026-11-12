@@ -23,8 +23,17 @@ namespace LastLamp
         [Header("Fade (seconds)")]
         [SerializeField] float fadeSeconds = 0.3f;
 
+        [Header("Height, from the top of the screen")]
+        [Tooltip("Where the panel sits in a level with a tutorial: under the tutorial panel.")]
+        [SerializeField] float tutorialLevelY = -230f;
+        [Tooltip("Where the panel sits in a level without one: at the top.")]
+        [SerializeField] float otherLevelY = -110f;
+
+        RectTransform panelRect;
         string timedText;
         float timedLeft;
+
+        void Awake() => panelRect = (RectTransform)panel.transform;
 
         void OnEnable() => lives.CheckpointReached += OnCheckpointReached;
         void OnDisable() => lives.CheckpointReached -= OnCheckpointReached;
@@ -50,6 +59,10 @@ namespace LastLamp
             float target = text != null ? 1f : 0f;
             float step = fadeSeconds > 0f ? Time.deltaTime / fadeSeconds : 1f;
             panel.alpha = Mathf.MoveTowards(panel.alpha, target, step);
+
+            Vector2 position = panelRect.anchoredPosition;
+            position.y = Tutorial.InLevel ? tutorialLevelY : otherLevelY;
+            panelRect.anchoredPosition = position;
         }
 
         string AreaText()

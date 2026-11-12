@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace LastLamp
 {
@@ -9,8 +8,9 @@ namespace LastLamp
     /// </summary>
     public class EndPoint : MonoBehaviour
     {
-        [SerializeField] PlayerController player;
-        [SerializeField] GameObject finishedMessage;
+        [Tooltip("The message the game freezes on, shown in the middle of the HUD.")]
+        [TextArea(1, 4)]
+        [SerializeField] string finishedText = "YOU MADE IT";
         [Tooltip("How close the player must get to finish, along the ground, in metres.")]
         [SerializeField] float radius = 2f;
 
@@ -20,22 +20,28 @@ namespace LastLamp
         [Tooltip("How long the game stays frozen on the finished message before the next level loads, in real seconds.")]
         [SerializeField] float holdSeconds = 2f;
 
+        PlayerController player;
         bool finished;
+        bool leaving;
         float heldFor;
+
+        void Awake() => player = PlayerController.Current;
 
         void Update()
         {
+            if (leaving) return;
+
             if (finished)
             {
                 if (string.IsNullOrEmpty(nextLevel))
                 {
-                    if (player.InteractPressed) Restart();
+                    if (player.InteractPressed) Leave(gameObject.scene.name);
                     return;
                 }
 
                 // The game is frozen (time scale 0), so the hold counts real time.
                 heldFor += Time.unscaledDeltaTime;
-                if (heldFor >= holdSeconds) LoadNextLevel();
+                if (heldFor >= holdSeconds) Leave(nextLevel);
                 return;
             }
 
@@ -45,19 +51,14 @@ namespace LastLamp
 
             finished = true;
             Time.timeScale = 0f;
-            finishedMessage.SetActive(true);
+            Hud.Current.ShowFinished(finishedText);
         }
 
-        void LoadNextLevel()
+        // The Level Loader fades out, swaps this level for the next (or a fresh copy of this one) and unfreezes the game.
+        void Leave(string level)
         {
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(nextLevel);
-        }
-
-        void Restart()
-        {
-            Time.timeScale = 1f;
-            SceneManager.LoadScene(gameObject.scene.buildIndex);
+            leaving = true;
+            LevelLoader.Current.LoadLevel(level);
         }
 
         void OnDrawGizmosSelected()

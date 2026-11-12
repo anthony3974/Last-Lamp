@@ -17,9 +17,6 @@ namespace LastLamp
         const string LitArea = "Lit";
 
         [Header("References")]
-        [SerializeField] PlayerController player;
-        [SerializeField] PlayerVisibility visibility;
-        [SerializeField] PlayerLives lives;
         [SerializeField] Transform[] patrolRoute;
         [SerializeField] Renderer alertLight;
         [SerializeField] AudioClip suspiciousSound;
@@ -64,6 +61,10 @@ namespace LastLamp
 
         readonly EnemyBrain brain = new EnemyBrain();
 
+        // The player is in the Main scene, so it is found when the monster wakes rather than linked.
+        PlayerController player;
+        PlayerVisibility visibility;
+        PlayerLives lives;
         NavMeshAgent agent;
         AudioSource voice;
         MaterialPropertyBlock alertBlock;
@@ -83,6 +84,9 @@ namespace LastLamp
 
         void Awake()
         {
+            player = PlayerController.Current;
+            visibility = player.GetComponent<PlayerVisibility>();
+            lives = player.GetComponent<PlayerLives>();
             agent = GetComponent<NavMeshAgent>();
             voice = GetComponent<AudioSource>();
             alertBlock = new MaterialPropertyBlock();
