@@ -10,10 +10,10 @@ PC is the main platform. Mobile may come later.
 
 Early prototype with two levels. The levels are still mostly plain shapes, but the player and the monster are finished models.
 
-- `Corridor_01`, the tutorial: a corridor with an open yard at each end under a night sky. On-screen prompts teach the controls in the start yard, then the rules in the first stretch of the corridor. Two monsters patrol it. It ends at a marker in the far yard, where you can restart.
-- `Warehouse_01`: a two-storey warehouse with four monsters, stairs up to a catwalk, light from skylights and windows, and an old wooden front door you can open. The back door is blocked; for now the level ends at a test marker outside the upper window.
+- `Corridor_01`, the tutorial: a corridor with an open yard at each end under a night sky. On-screen prompts teach the controls in the start yard, then the rules in the first stretch of the corridor. Two monsters patrol it. It ends at a marker in the far yard: the game freezes on "YOU MADE IT" for 2 seconds, then the warehouse loads.
+- `Warehouse_01`: a two-storey warehouse with four monsters, stairs up to a catwalk, light from skylights and windows, and an old wooden front door you can open. The back door is blocked; for now the level ends at a test marker outside the upper window, where you can restart.
 
-The two levels aren't linked yet, so open each one on its own.
+Play starts in the corridor and carries on into the warehouse, with fresh lives. You can also open either level on its own.
 
 Working so far:
 - Third-person player, a realistic human in a long coat: walk, sprint, crouch and jump, with a camera that stays out of walls.
