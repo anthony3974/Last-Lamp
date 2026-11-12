@@ -557,9 +557,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'YOU MADE IT
-
-    E  Restart'
+  m_Text: YOU MADE IT
 --- !u!222 &162278752
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6892,6 +6890,8 @@ MonoBehaviour:
   player: {fileID: 540287176}
   finishedMessage: {fileID: 162278750}
   radius: 2
+  nextLevel: Warehouse_01
+  holdSeconds: 2
 --- !u!4 &1418485809
 Transform:
   m_ObjectHideFlags: 0
