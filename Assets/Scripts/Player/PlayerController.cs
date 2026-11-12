@@ -82,6 +82,8 @@ namespace LastLamp
 
         public event Action Landed;
         public event Action Jumped;
+        /// <summary>Raised as a dodge roll starts.</summary>
+        public event Action Dodged;
 
         public float HorizontalSpeed => horizontalVelocity.magnitude;
         public float SprintSpeed => sprintSpeed;
@@ -274,6 +276,7 @@ namespace LastLamp
             dodgeDirection = wish.sqrMagnitude > 0.01f ? wish.normalized : -LookDirection;
             dodgeTimeLeft = dodgeSeconds;
             dodgeCooldownLeft = dodgeCooldown;
+            Dodged?.Invoke();
         }
 
         void TrackLanding()

@@ -4,6 +4,16 @@ using UnityEngine.AI;
 
 namespace LastLamp
 {
+    public enum PunchResult
+    {
+        /// <summary>No enemy was in reach.</summary>
+        Missed,
+        /// <summary>It stunned an enemy.</summary>
+        Stunned,
+        /// <summary>It reached only enemies stunned too recently, which shrugged it off.</summary>
+        ShruggedOff,
+    }
+
     /// <summary>
     /// Gives an EnemyBrain its senses and carries out its decisions with a NavMeshAgent.
     /// </summary>
@@ -130,12 +140,17 @@ namespace LastLamp
 
         void Start() => ShowAlertColour();
 
-        public static void PunchNearby(Vector3 from, Vector3 direction, float reach, float halfAngle)
+        /// <returns>Stunned if the punch stunned any enemy, ShruggedOff if it reached only enemies stunned too recently, else Missed.</returns>
+        public static PunchResult PunchNearby(Vector3 from, Vector3 direction, float reach, float halfAngle)
         {
+            var result = PunchResult.Missed;
             foreach (var enemy in Active)
             {
-                if (CombatRules.InPunchArc(from, direction, enemy.transform.position, reach, halfAngle)) enemy.TakePunch(from);
+                if (!CombatRules.InPunchArc(from, direction, enemy.transform.position, reach, halfAngle)) continue;
+                if (enemy.TakePunch(from)) result = PunchResult.Stunned;
+                else if (result == PunchResult.Missed) result = PunchResult.ShruggedOff;
             }
+            return result;
         }
 
         /// <summary>True while any enemy is in its warning beat or investigating, before a chase.</summary>
@@ -148,10 +163,13 @@ namespace LastLamp
             return false;
         }
 
-        void TakePunch(Vector3 playerPosition)
+        /// <returns>True if the punch stunned this enemy, false if it was stunned too recently and shrugged it off.</returns>
+        bool TakePunch(Vector3 playerPosition)
         {
             EnemyState before = brain.State;
-            if (brain.TryStun(playerPosition)) OnStateChanged(before);
+            if (!brain.TryStun(playerPosition)) return false;
+            OnStateChanged(before);
+            return true;
         }
 
         void Hear(NoiseEvent noise)

@@ -18,6 +18,9 @@ namespace LastLamp
 
         public event Action Punched;
 
+        /// <summary>What the latest punch did. Set before <see cref="Punched"/> is raised.</summary>
+        public PunchResult LastPunch { get; private set; }
+
         void Awake()
         {
             player = GetComponent<PlayerController>();
@@ -29,7 +32,7 @@ namespace LastLamp
             if (player.IsHidden || cooldownLeft > 0f || !player.AttackPressed) return;
 
             cooldownLeft = punchCooldown;
-            Enemy.PunchNearby(transform.position, player.LookDirection, punchReach, punchHalfAngle);
+            LastPunch = Enemy.PunchNearby(transform.position, player.LookDirection, punchReach, punchHalfAngle);
             Punched?.Invoke();
         }
     }
