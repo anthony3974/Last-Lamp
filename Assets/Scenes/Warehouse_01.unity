@@ -16133,7 +16133,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cc6fcc357832e343a87eab8baa57d5f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  brightIntensityMultiplier: 2.5
+  brightIntensityMultiplier: 3.75
   brightRangeMultiplier: 1.5
 --- !u!108 &874323597
 Light:
@@ -16146,7 +16146,7 @@ Light:
   serializedVersion: 11
   m_Type: 0
   m_Color: {r: 1, g: 0.93, b: 0.8, a: 1}
-  m_Intensity: 12
+  m_Intensity: 8
   m_Range: 13
   m_SpotAngle: 45
   m_InnerSpotAngle: 25
