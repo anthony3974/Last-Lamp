@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LastLamp
@@ -15,9 +16,13 @@ namespace LastLamp
 
         PlayerController player;
         Checkpoint current;
+        readonly HashSet<Checkpoint> reachedBefore = new HashSet<Checkpoint>();
 
         /// <summary>Raised after each catch. True means that catch used up the last life.</summary>
         public event Action<bool> Caught;
+
+        /// <summary>Raised the first time the player reaches each checkpoint, not counting the first one.</summary>
+        public event Action<Checkpoint> CheckpointReached;
 
         public int Lives { get; private set; }
 
@@ -26,6 +31,7 @@ namespace LastLamp
             player = GetComponent<PlayerController>();
             current = firstCheckpoint;
             Lives = maxLives;
+            if (firstCheckpoint != null) reachedBefore.Add(firstCheckpoint);
         }
 
         void Update()
@@ -33,7 +39,10 @@ namespace LastLamp
             if (player.IsHidden) return;
 
             Checkpoint reached = Checkpoint.At(transform.position);
-            if (reached != null) current = reached;
+            if (reached == null || reached == current) return;
+
+            current = reached;
+            if (reachedBefore.Add(reached)) CheckpointReached?.Invoke(reached);
         }
 
         public void Catch()
