@@ -61,7 +61,8 @@ namespace LastLamp
 
         void TakeStep()
         {
-            Noise.Emit(transform.position, NoiseRules.Footstep(player.IsSprinting, player.IsCrouching));
+            bool inLamp = LampZone.AnyContains(transform.position);
+            Noise.Emit(transform.position, NoiseRules.Footstep(player.IsSprinting, player.IsCrouching, inLamp));
         }
 
         /// <summary>Called by the animation as a foot lands.</summary>

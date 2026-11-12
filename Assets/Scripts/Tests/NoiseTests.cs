@@ -29,6 +29,13 @@ namespace LastLamp.Tests
         }
 
         [Test]
+        public void FootstepsInALampPoolAreSilentToEnemies()
+        {
+            Assert.That(NoiseRules.Footstep(false, false, true), Is.EqualTo(0f));
+            Assert.That(NoiseRules.Footstep(true, false, true), Is.EqualTo(0f));
+        }
+
+        [Test]
         public void LandingInALampPoolIsSilentToEnemies()
         {
             Assert.That(NoiseRules.Landing(false, true), Is.EqualTo(0f));

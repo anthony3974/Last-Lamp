@@ -10,9 +10,10 @@ namespace LastLamp
         const float LandingRadius = 10f;
         const float CrouchedLandingMultiplier = 0.5f;
 
-        public static float Footstep(bool sprinting, bool crouching)
+        /// <summary>Footsteps inside a lamp pool are silent to enemies, like landings, so a pool is completely safe.</summary>
+        public static float Footstep(bool sprinting, bool crouching, bool inLamp = false)
         {
-            if (crouching) return 0f;
+            if (crouching || inLamp) return 0f;
             return sprinting ? SprintRadius : WalkRadius;
         }
 
