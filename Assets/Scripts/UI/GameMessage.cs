@@ -5,7 +5,7 @@ namespace LastLamp
 {
     /// <summary>
     /// Short game messages in a panel on the HUD: "Checkpoint reached" for a moment the first time the player reaches
-    /// a checkpoint. Fades in and out.
+    /// a checkpoint, and a <see cref="MessageArea"/>'s text for as long as the player stands in it. Fades in and out.
     /// </summary>
     public class GameMessage : MonoBehaviour
     {
@@ -33,7 +33,7 @@ namespace LastLamp
 
         void OnCheckpointReached(Checkpoint checkpoint) => Show(checkpointText, checkpointSeconds);
 
-        /// <summary>Shows a message for a few seconds.</summary>
+        /// <summary>Shows a message for a few seconds. It takes over from an area's message while it lasts.</summary>
         public void Show(string text, float seconds)
         {
             timedText = text;
@@ -44,12 +44,19 @@ namespace LastLamp
         {
             timedLeft = Mathf.Max(0f, timedLeft - Time.deltaTime);
 
-            string text = timedLeft > 0f ? timedText : null;
+            string text = timedLeft > 0f ? timedText : AreaText();
             if (text != null) label.text = text;
 
             float target = text != null ? 1f : 0f;
             float step = fadeSeconds > 0f ? Time.deltaTime / fadeSeconds : 1f;
             panel.alpha = Mathf.MoveTowards(panel.alpha, target, step);
+        }
+
+        string AreaText()
+        {
+            if (player.IsHidden) return null;
+            MessageArea area = MessageArea.At(player.transform.position);
+            return area != null ? area.Text : null;
         }
     }
 }
