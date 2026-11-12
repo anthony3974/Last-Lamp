@@ -17,6 +17,18 @@ namespace LastLamp
             return localPlayer.z < 0f ? 1 : -1;
         }
 
+        /// <summary>
+        /// True the moment the player comes through the doorway to the inside: last frame they were on the other side,
+        /// now they are inside, and close enough that they used this doorway rather than going round.
+        /// </summary>
+        /// <param name="insideSide">+1 if inside is toward +Z, -1 if toward -Z.</param>
+        public static bool CameInside(Vector3 previousLocalPlayer, Vector3 localPlayer, int insideSide, float reach)
+        {
+            bool wasOutside = previousLocalPlayer.z * insideSide < 0f;
+            bool isInside = localPlayer.z * insideSide >= 0f;
+            return wasOutside && isInside && new Vector2(localPlayer.x, localPlayer.z).magnitude <= reach;
+        }
+
         /// <summary>A heavy door starts slowly, swings, then slows to a stop.</summary>
         public static float Ease(float amount)
         {

@@ -9,6 +9,27 @@ namespace LastLamp.Tests
         const float Clearance = 0.45f;
 
         [Test]
+        public void ComingThroughToTheInsideCounts()
+        {
+            Assert.That(DoorRules.CameInside(new Vector3(0f, 0f, -0.1f), new Vector3(0f, 0f, 0.1f), 1, 2.4f), Is.True);
+            Assert.That(DoorRules.CameInside(new Vector3(0f, 0f, 0.1f), new Vector3(0f, 0f, -0.1f), -1, 2.4f), Is.True);
+        }
+
+        [Test]
+        public void GoingOutOrStayingOnOneSideDoesNot()
+        {
+            Assert.That(DoorRules.CameInside(new Vector3(0f, 0f, 0.1f), new Vector3(0f, 0f, -0.1f), 1, 2.4f), Is.False);
+            Assert.That(DoorRules.CameInside(new Vector3(0f, 0f, 0.5f), new Vector3(0f, 0f, 0.6f), 1, 2.4f), Is.False);
+            Assert.That(DoorRules.CameInside(new Vector3(0f, 0f, -0.6f), new Vector3(0f, 0f, -0.5f), 1, 2.4f), Is.False);
+        }
+
+        [Test]
+        public void CrossingTheDoorLineFarFromTheDoorwayDoesNot()
+        {
+            Assert.That(DoorRules.CameInside(new Vector3(10f, 0f, -0.1f), new Vector3(10f, 0f, 0.1f), 1, 2.4f), Is.False);
+        }
+
+        [Test]
         public void SwingsAwayFromThePlayer()
         {
             Assert.That(DoorRules.SwingSide(new Vector3(0f, 0f, -2f)), Is.EqualTo(1));

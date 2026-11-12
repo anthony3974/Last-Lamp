@@ -19,6 +19,8 @@ namespace LastLamp
         [SerializeField] string nextLevel = "";
         [Tooltip("How long the game stays frozen on the finished message before the next level loads, in real seconds.")]
         [SerializeField] float holdSeconds = 2f;
+        [Tooltip("With no next level: the level Interact restarts, by scene name, such as the first area of a joined world. Leave empty to restart this one.")]
+        [SerializeField] string restartLevel = "";
 
         PlayerController player;
         bool finished;
@@ -35,7 +37,7 @@ namespace LastLamp
             {
                 if (string.IsNullOrEmpty(nextLevel))
                 {
-                    if (player.InteractPressed) Leave(gameObject.scene.name);
+                    if (player.InteractPressed) Leave(string.IsNullOrEmpty(restartLevel) ? gameObject.scene.name : restartLevel);
                     return;
                 }
 

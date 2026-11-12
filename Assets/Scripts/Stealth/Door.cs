@@ -31,10 +31,22 @@ namespace LastLamp
         [Tooltip("How far the creak carries to monsters, in metres. 0 is silent to them.")]
         [SerializeField] float noiseRadius = 0f;
 
+        [Header("Close behind the player")]
+        [Tooltip("Swings shut on its own after the player comes through to the inside and is clear of the leaves. They can open it again.")]
+        [SerializeField] bool closeBehindPlayer;
+        [Tooltip("Which side is inside: 1 is the way this object's blue arrow points, -1 the other way.")]
+        [SerializeField] int insideSide = 1;
+        [Tooltip("How long it waits, once the player is through and clear, before it starts to close, in seconds.")]
+        [SerializeField] float closeDelay = 0.4f;
+
         AudioSource voice;
         float amount;
         float target;
         int side = 1;
+        bool knowsPlayer;
+        Vector3 lastPlayerLocal;
+        bool closingBehind;
+        float closeWait;
 
         public bool IsOpen => target > 0f;
         public bool IsMoving => !Mathf.Approximately(amount, target);
@@ -96,6 +108,7 @@ namespace LastLamp
 
         void Update()
         {
+            if (closeBehindPlayer) CloseBehindPlayer();
             if (!IsMoving) return;
 
             amount = Mathf.MoveTowards(amount, target, Time.deltaTime / openSeconds);
@@ -104,6 +117,38 @@ namespace LastLamp
             rightLeaf.localRotation = Quaternion.Euler(0f, right, 0f);
 
             if (!IsMoving && !IsOpen) voice.PlayOneShot(shut);
+        }
+
+        // Waits for the player to come in through the open door, then shuts it behind them once the leaves would miss them.
+        void CloseBehindPlayer()
+        {
+            PlayerController player = PlayerController.Current;
+            if (player == null) return;
+
+            Vector3 playerPosition = player.transform.position;
+            Vector3 local = transform.InverseTransformPoint(playerPosition);
+            if (knowsPlayer && IsOpen && DoorRules.CameInside(lastPlayerLocal, local, insideSide, reach))
+            {
+                closingBehind = true;
+                closeWait = closeDelay;
+            }
+            lastPlayerLocal = local;
+            knowsPlayer = true;
+
+            if (!closingBehind) return;
+            // Gone back out, or shut by hand: nothing to do.
+            if (!IsOpen || local.z * insideSide < 0f)
+            {
+                closingBehind = false;
+                return;
+            }
+            if (!CanToggle(playerPosition)) return;
+
+            closeWait -= Time.deltaTime;
+            if (closeWait > 0f) return;
+
+            closingBehind = false;
+            Toggle(playerPosition);
         }
 
         void OnDrawGizmosSelected()
