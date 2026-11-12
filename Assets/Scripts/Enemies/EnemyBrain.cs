@@ -124,6 +124,9 @@ namespace LastLamp
 
         void RememberPosition(in EnemySenses senses)
         {
+            // A stunned enemy is reeling, so it searches where it was punched, not where the player went.
+            if (State == EnemyState.Stunned) return;
+
             if (senses.HeardNoise) LastKnownPosition = senses.NoisePosition;
             if (senses.SeesPlayer && (senses.Exposure > 0f || IsHunting)) LastKnownPosition = senses.PlayerPosition;
         }
@@ -161,10 +164,13 @@ namespace LastLamp
             }
         }
 
+        // A punch always breaks a chase: the enemy recovers into Search around where it was punched,
+        // and has to notice the player afresh, warning first, before it can chase again.
         void TickStunned()
         {
             if (secondsInState < StunSeconds) return;
-            Enter(meter.Stage == DetectionStage.Spotted ? EnemyState.Chase : EnemyState.Search);
+            meter.Reset();
+            Enter(EnemyState.Search);
         }
 
         void TickChase(in EnemySenses senses, float deltaTime)

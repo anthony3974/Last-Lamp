@@ -193,14 +193,37 @@ namespace LastLamp.Tests
         }
 
         [Test]
-        public void AChaseResumesAfterAStun()
+        public void APunchedEnemySearchesWhereItWasPunchedEvenIfItStillSeesThePlayer()
         {
             var brain = BrainInChase();
-            brain.TryStun(Vector3.zero);
+            brain.TryStun(Vector3.one);
 
             brain.Tick(SeenInTheDark(), EnemyBrain.StunSeconds + Frame);
 
+            Assert.That(brain.State, Is.EqualTo(EnemyState.Search));
+            Assert.That(brain.LastKnownPosition, Is.EqualTo(Vector3.one));
+        }
+
+        [Test]
+        public void APunchedEnemyMustNoticeThePlayerAfreshBeforeChasingAgain()
+        {
+            var brain = BrainInChase();
+            brain.TryStun(Vector3.one);
+            var seen = SeenInTheDark();
+            brain.Tick(seen, EnemyBrain.StunSeconds + Frame);
+
+            brain.Tick(seen, Frame);
+            Assert.That(brain.State, Is.Not.EqualTo(EnemyState.Chase));
+
+            bool warned = false;
+            for (int i = 0; i < 600 && brain.State != EnemyState.Chase; i++)
+            {
+                brain.Tick(seen, Frame);
+                warned |= brain.State == EnemyState.Suspicious;
+            }
+
             Assert.That(brain.State, Is.EqualTo(EnemyState.Chase));
+            Assert.That(warned, Is.True);
         }
 
         [Test]
