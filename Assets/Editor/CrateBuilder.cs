@@ -1,6 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
+using LastLamp;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -9,29 +13,34 @@ using Object = UnityEngine.Object;
 using Random = System.Random;
 
 /// <summary>
-/// One-off tool (task 26 trial): gives ONE crate, the one beside the player's start in Corridor_01, the look of an
-/// old wooden shipping crate, so the owner can judge the design before every crate gets it.
-/// Makes the wood texture, the mesh and the materials into Assets/Art/Crate, then adds the mesh as a child of the
-/// crate. The crate itself keeps its collider, size, place, layer and everything else; only its grey box renderer is
-/// switched off (switch it back on to compare). Safe to run again: it replaces what it made before.
-/// Delete once the crate design is confirmed.
+/// One-off tool (task 26): gives every crate in both levels, hiding crates included, the look of an old wooden
+/// shipping crate. A crate is a box on the old <c>Crate_Brown</c> material with Unity's cube mesh.
+/// For each one it adds a <c>Crate_Wooden</c> child, a mesh built in metres at the crate's real size with no collider,
+/// and switches the crate's own renderer off. The crate keeps its collider, transform, layer and components, so
+/// sight and stealth don't change. Crates in a prefab (the hiding spot) are changed in the prefab, once.
+/// Makes the wood textures, materials and one mesh per crate size into Assets/Art/Crate.
+/// Safe to run again: it updates what it made before and never adds a second copy. Delete once the crates are done.
 /// </summary>
-public static class TestCrateBuilder
+public static class CrateBuilder
 {
-    const string ScenePath = "Assets/Scenes/Corridor_01.unity";
+    static readonly string[] ScenePaths = { "Assets/Scenes/Corridor_01.unity", "Assets/Scenes/Warehouse_01.unity" };
+    const string PrefabFolder = "Assets/Prefabs";
+    const string OldMaterialPath = "Assets/Materials/Crate_Brown.mat";
+
     const string ArtFolder = "Assets/Art/Crate";
     const string AlbedoPath = ArtFolder + "/Crate_Wood_Albedo.png";
     const string NormalPath = ArtFolder + "/Crate_Wood_Normal.png";
-    const string MeshPath = ArtFolder + "/Crate_Wooden.asset";
+    const string MeshPrefix = "Crate_Wooden";
+    // The mesh the test crate (task 26 trial) made; it is the 1.5 m crate's mesh and is renamed to say so.
+    const string TrialMeshPath = ArtFolder + "/Crate_Wooden.asset";
     const string VisualName = "Crate_Wooden";
 
-    // The crate closest to the Player's start (0, 0.05, -20): 3 m to its right in the start yard.
-    const string CratePath = "Yard_Start/Crate_03";
-    static readonly Vector3 ExpectedPosition = new Vector3(3f, 0.75f, -20f);
+    // Below this the frame and planks no longer fit on a face.
+    const float SmallestSide = 0.5f;
 
     // The frame (corner boards, rails and braces) stands proud of the planks, so its edges catch the light and the
     // crate reads as a crate even in the dark. The outside of the frame is exactly the old box, so nothing the crate
-    // looks like sticks out past its collider (only the iron corners, by 4 mm).
+    // looks like sticks out past it (only the iron corners, by 4 mm).
     const float FrameWidth = 0.11f;
     const float FrameThickness = 0.03f;
     const float FrameChamfer = 0.008f;
@@ -54,89 +63,351 @@ public static class TestCrateBuilder
     static readonly int[] Sides = { -1, 1 };
 
     // The wood texture covers 1 m across the grain, so each board is cut from a different part of it, and 2 m along
-    // it, longer than any crate board, at 512 pixels a metre.
+    // it, at 512 pixels a metre. A board longer than that has the texture squeezed a little along it to fit.
     const float TextureWidth = 1f;
     const float TextureLength = 2f;
     const int PixelsWide = 512;
     const int PixelsHigh = 1024;
 
-    [MenuItem("Tools/Build Test Crate")]
+    /// <summary>What a run did, logged at the end.</summary>
+    class Report
+    {
+        public readonly List<string> Converted = new List<string>();
+        public readonly List<string> Skipped = new List<string>();
+        public readonly List<string> Meshes = new List<string>();
+        public bool Failed;
+    }
+
+    static readonly Dictionary<string, Mesh> MeshesBySize = new Dictionary<string, Mesh>();
+    static Material oldMaterial;
+    static Material[] materials;
+
+    [MenuItem("Tools/Build Wooden Crates")]
     static void Run()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
         {
-            Debug.LogError("Build Test Crate: leave Play mode first.");
+            Debug.LogError("Build Wooden Crates: leave Play mode first.");
+            return;
+        }
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+        oldMaterial = AssetDatabase.LoadAssetAtPath<Material>(OldMaterialPath);
+        if (oldMaterial == null)
+        {
+            Debug.LogError($"Build Wooden Crates: {OldMaterialPath} was not found, so no crate can be recognised.");
             return;
         }
 
-        Scene scene = SceneManager.GetActiveScene();
-        if (scene.path != ScenePath)
+        SceneSetup[] setup = EditorSceneManager.GetSceneManagerSetup();
+        var report = new Report();
+        MeshesBySize.Clear();
+        try
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            scene = EditorSceneManager.OpenScene(ScenePath);
+            EditorUtility.DisplayProgressBar("Build Wooden Crates", "Wood textures and materials", 0f);
+            PrepareArt();
+
+            EditorUtility.DisplayProgressBar("Build Wooden Crates", "Prefabs", 0.2f);
+            var convertedPrefabs = ConvertPrefabs(report);
+
+            for (int i = 0; i < ScenePaths.Length; i++)
+            {
+                EditorUtility.DisplayProgressBar("Build Wooden Crates", ScenePaths[i], 0.3f + 0.6f * i / ScenePaths.Length);
+                Scene scene = EditorSceneManager.OpenScene(ScenePaths[i], OpenSceneMode.Single);
+                ConvertScene(scene, convertedPrefabs, report);
+                EditorSceneManager.MarkSceneDirty(scene);
+                if (!EditorSceneManager.SaveScene(scene))
+                {
+                    report.Failed = true;
+                    Debug.LogError($"Build Wooden Crates: {ScenePaths[i]} could not be saved.");
+                }
+            }
+
+            if (!report.Failed) RemoveUnusedMeshes(report);
+            AssetDatabase.SaveAssets();
         }
-        Build(scene);
+        catch (Exception e)
+        {
+            report.Failed = true;
+            Debug.LogException(e);
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+            if (setup.Length > 0 && setup.All(s => File.Exists(s.path))) EditorSceneManager.RestoreSceneManagerSetup(setup);
+        }
+
+        var text = new StringBuilder();
+        text.AppendLine($"Build Wooden Crates: {(report.Failed ? "FAILED part way, see the errors above" : "finished")}. " +
+                        $"{report.Converted.Count} crates converted, {report.Skipped.Count} skipped.");
+        text.AppendLine("Converted:");
+        foreach (string line in report.Converted) text.AppendLine("  " + line);
+        text.AppendLine("Skipped:");
+        foreach (string line in report.Skipped) text.AppendLine("  " + line);
+        text.AppendLine("Meshes:");
+        foreach (string line in report.Meshes) text.AppendLine("  " + line);
+        if (report.Failed) Debug.LogError(text.ToString());
+        else Debug.Log(text.ToString());
     }
 
-    static void Build(Scene scene)
+    // --- Finding and converting crates ---
+
+    /// <summary>Converts the crates in every prefab under Assets/Prefabs, once each.</summary>
+    /// <returns>The prefabs that hold crates, so their instances in the scenes can be checked.</returns>
+    static HashSet<string> ConvertPrefabs(Report report)
     {
-        GameObject yard = scene.GetRootGameObjects().FirstOrDefault(root => root.name == CratePath.Split('/')[0]);
-        Transform crate = yard != null ? yard.transform.Find(CratePath.Substring(CratePath.IndexOf('/') + 1)) : null;
-        var box = crate != null ? crate.GetComponent<BoxCollider>() : null;
-        var oldRenderer = crate != null ? crate.GetComponent<MeshRenderer>() : null;
-        if (box == null || oldRenderer == null)
+        var converted = new HashSet<string>();
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { PrefabFolder }))
         {
-            Debug.LogError($"Build Test Crate: {CratePath} with a BoxCollider and MeshRenderer was not found in {ScenePath}.");
-            return;
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset == null || !asset.GetComponentsInChildren<MeshRenderer>(true).Any(UsesOldMaterial)) continue;
+
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                int before = report.Converted.Count;
+                ConvertAll(root, $"{Path.GetFileName(path)} (prefab asset)", null, report);
+                if (report.Converted.Count > before)
+                {
+                    PrefabUtility.SaveAsPrefabAsset(root, path);
+                    converted.Add(path);
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
-        if (Vector3.Distance(crate.position, ExpectedPosition) > 0.5f)
-            Debug.LogWarning($"Build Test Crate: {CratePath} has moved to {crate.position}; building on it anyway.");
+        return converted;
+    }
 
-        if (!AssetDatabase.IsValidFolder(ArtFolder)) AssetDatabase.CreateFolder("Assets/Art", "Crate");
+    static void ConvertScene(Scene scene, HashSet<string> convertedPrefabs, Report report)
+    {
+        string where = Path.GetFileNameWithoutExtension(scene.path);
+        foreach (GameObject root in scene.GetRootGameObjects())
+            ConvertAll(root, where, convertedPrefabs, report);
+    }
 
-        MakeWoodTextures();
-        Material[] materials = { MakeWoodMaterial(), MakeFrameMaterial(), MakeIronMaterial() };
+    /// <summary>Converts every crate under the root, and notes anything named like a crate that isn't one.</summary>
+    /// <param name="convertedPrefabs">Null when the root is a prefab asset being edited.</param>
+    static void ConvertAll(GameObject root, string where, HashSet<string> convertedPrefabs, Report report)
+    {
+        var crates = new List<Transform>();
+        foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
+        {
+            // Null if an extra copy of a visual was removed earlier in this loop.
+            if (renderer == null || renderer.gameObject.name == VisualName || !UsesOldMaterial(renderer)) continue;
+            string path = PathOf(renderer.transform);
+
+            var filter = renderer.GetComponent<MeshFilter>();
+            if (filter == null || !IsBuiltInCube(filter.sharedMesh))
+            {
+                report.Skipped.Add($"{where}: {path}: on Crate_Brown but not a plain box (mesh " +
+                                   $"{(filter != null && filter.sharedMesh != null ? filter.sharedMesh.name : "none")}), left as it is");
+                continue;
+            }
+
+            if (convertedPrefabs != null && PrefabUtility.IsPartOfPrefabInstance(renderer))
+            {
+                string source = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(renderer);
+                if (!convertedPrefabs.Contains(source))
+                {
+                    report.Skipped.Add($"{where}: {path}: part of {source}, which was not converted, left as it is");
+                    continue;
+                }
+            }
+
+            string result = Convert(renderer, convertedPrefabs != null);
+            if (result.StartsWith("skipped"))
+            {
+                report.Skipped.Add($"{where}: {path}: {result}");
+                continue;
+            }
+
+            crates.Add(renderer.transform);
+            string prefab = convertedPrefabs == null ? "in the prefab"
+                : PrefabUtility.IsPartOfPrefabInstance(renderer)
+                    ? $"instance of {Path.GetFileName(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(renderer))}"
+                    : "scene object";
+            bool hiding = renderer.GetComponentInParent<HidingSpot>(true) != null;
+            report.Converted.Add($"{where}: {path}: {result}, {prefab}{(hiding ? ", hiding spot" : "")}");
+        }
+
+        // Anything else named like a crate, so the log shows it was looked at and left alone on purpose.
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name == VisualName || t.name.IndexOf("crate", StringComparison.OrdinalIgnoreCase) < 0) continue;
+            if (crates.Any(crate => crate == t || crate.IsChildOf(t))) continue;
+            var renderer = t.GetComponent<Renderer>();
+            if (renderer != null && UsesOldMaterial(renderer)) continue; // Already reported above.
+            string why = renderer == null ? "no renderer" : $"not on Crate_Brown ({string.Join(", ", renderer.sharedMaterials.Select(m => m != null ? m.name : "none"))})";
+            report.Skipped.Add($"{where}: {PathOf(t)}: named like a crate but {why}, so not a crate, left as it is");
+        }
+    }
+
+    /// <summary>Gives one crate its wooden look. Returns a line for the log.</summary>
+    /// <param name="inScene">False when editing a prefab asset's contents.</param>
+    static string Convert(MeshRenderer oldRenderer, bool inScene)
+    {
+        Transform crate = oldRenderer.transform;
+        Mesh box = oldRenderer.GetComponent<MeshFilter>().sharedMesh;
 
         // The mesh is built in metres at the crate's real size, and its object undoes the crate's scale, so the wood
-        // texture keeps its scale on the boards whatever size the crate is.
-        Vector3 scale = crate.lossyScale;
-        Vector3 size = Vector3.Scale(box.size, new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-        Mesh mesh = BuildMesh(size / 2f);
+        // keeps its real size on the boards whatever size the crate is.
+        Vector3 scale = Round(crate.lossyScale, 100000f);
+        if (Mathf.Abs(scale.x) < 1e-4f || Mathf.Abs(scale.y) < 1e-4f || Mathf.Abs(scale.z) < 1e-4f)
+            return $"skipped: scaled to nothing ({scale})";
+        Vector3 size = Round(Vector3.Scale(box.bounds.size, Abs(scale)), 1000f);
+        if (Mathf.Min(size.x, Mathf.Min(size.y, size.z)) < SmallestSide)
+            return $"skipped: {SizeName(size)} is too small for the wooden crate (smallest side {SmallestSide} m)";
 
-        Transform old = crate.Find(VisualName);
-        if (old != null) Object.DestroyImmediate(old.gameObject);
+        Mesh mesh = MeshFor(size);
+        var localPosition = box.bounds.center;
+        var localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
 
-        var visual = new GameObject(VisualName, typeof(MeshFilter), typeof(MeshRenderer)) { layer = crate.gameObject.layer };
-        visual.transform.SetParent(crate, false);
-        visual.transform.localPosition = box.center;
-        visual.transform.localRotation = Quaternion.identity;
-        visual.transform.localScale = new Vector3(1f / scale.x, 1f / scale.y, 1f / scale.z);
-        GameObjectUtility.SetStaticEditorFlags(visual, GameObjectUtility.GetStaticEditorFlags(crate.gameObject));
+        // Keep one visual child (the prefab's, if the crate is in a prefab instance) and remove any extra copies.
+        var visuals = crate.Cast<Transform>().Where(child => child.name == VisualName).ToList();
+        Transform visual = visuals.FirstOrDefault(v => PrefabUtility.IsPartOfPrefabInstance(v) && !PrefabUtility.IsAddedGameObjectOverride(v.gameObject))
+                           ?? visuals.FirstOrDefault();
+        foreach (var extra in visuals.Where(v => v != visual)) Object.DestroyImmediate(extra.gameObject);
 
-        visual.GetComponent<MeshFilter>().sharedMesh = mesh;
-        var renderer = visual.GetComponent<MeshRenderer>();
-        renderer.sharedMaterials = materials;
-        renderer.shadowCastingMode = oldRenderer.shadowCastingMode;
-        renderer.receiveShadows = oldRenderer.receiveShadows;
-        renderer.staticShadowCaster = oldRenderer.staticShadowCaster;
-        renderer.lightProbeUsage = oldRenderer.lightProbeUsage;
-        renderer.reflectionProbeUsage = oldRenderer.reflectionProbeUsage;
-        renderer.motionVectorGenerationMode = oldRenderer.motionVectorGenerationMode;
-        renderer.allowOcclusionWhenDynamic = oldRenderer.allowOcclusionWhenDynamic;
-        renderer.renderingLayerMask = oldRenderer.renderingLayerMask;
+        bool fromPrefab = inScene && visual != null && PrefabUtility.IsPartOfPrefabInstance(visual);
+        bool resized = false;
+        if (fromPrefab)
+        {
+            // Hide_Crate scales the prefab's body up, so its visual needs its own mesh and scale: an instance override.
+            var filter = visual.GetComponent<MeshFilter>();
+            var sourceFilter = PrefabUtility.GetCorrespondingObjectFromSource(filter);
+            var sourceTransform = PrefabUtility.GetCorrespondingObjectFromSource(visual);
+            bool sameAsPrefab = sourceFilter != null && sourceFilter.sharedMesh == mesh && sourceTransform != null &&
+                                sourceTransform.localPosition == localPosition && sourceTransform.localScale == localScale;
+            if (sameAsPrefab)
+            {
+                PrefabUtility.RevertObjectOverride(visual, InteractionMode.AutomatedAction);
+                PrefabUtility.RevertObjectOverride(filter, InteractionMode.AutomatedAction);
+            }
+            else
+            {
+                resized = true;
+                visual.localPosition = localPosition;
+                visual.localRotation = Quaternion.identity;
+                visual.localScale = localScale;
+                filter.sharedMesh = mesh;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(visual);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(filter);
+            }
+        }
+        else
+        {
+            if (visual == null)
+            {
+                visual = new GameObject(VisualName, typeof(MeshFilter), typeof(MeshRenderer)).transform;
+                visual.SetParent(crate, false);
+            }
+            foreach (var collider in visual.GetComponents<Collider>()) Object.DestroyImmediate(collider);
 
-        // Only the look changes: the collider, layer and transform stay as they were, so sight and stealth don't.
-        oldRenderer.enabled = false;
+            visual.gameObject.layer = crate.gameObject.layer;
+            visual.gameObject.SetActive(true);
+            GameObjectUtility.SetStaticEditorFlags(visual.gameObject, GameObjectUtility.GetStaticEditorFlags(crate.gameObject));
+            visual.localPosition = localPosition;
+            visual.localRotation = Quaternion.identity;
+            visual.localScale = localScale;
+
+            // Not ??: a missing component is Unity's fake null in the editor.
+            var filter = visual.GetComponent<MeshFilter>();
+            if (filter == null) filter = visual.gameObject.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+            var renderer = visual.GetComponent<MeshRenderer>();
+            if (renderer == null) renderer = visual.gameObject.AddComponent<MeshRenderer>();
+            renderer.enabled = true;
+            renderer.sharedMaterials = materials;
+            renderer.shadowCastingMode = oldRenderer.shadowCastingMode;
+            renderer.receiveShadows = oldRenderer.receiveShadows;
+            renderer.staticShadowCaster = oldRenderer.staticShadowCaster;
+            renderer.lightProbeUsage = oldRenderer.lightProbeUsage;
+            renderer.reflectionProbeUsage = oldRenderer.reflectionProbeUsage;
+            renderer.motionVectorGenerationMode = oldRenderer.motionVectorGenerationMode;
+            renderer.allowOcclusionWhenDynamic = oldRenderer.allowOcclusionWhenDynamic;
+            renderer.renderingLayerMask = oldRenderer.renderingLayerMask;
+        }
+
+        // Only the look changes: the collider, layer, transform and components stay as they were.
+        if (oldRenderer.enabled)
+        {
+            oldRenderer.enabled = false;
+            if (inScene && PrefabUtility.IsPartOfPrefabInstance(oldRenderer)) PrefabUtility.RecordPrefabInstancePropertyModifications(oldRenderer);
+        }
         EditorUtility.SetDirty(oldRenderer);
+        EditorUtility.SetDirty(visual.gameObject);
 
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-        AssetDatabase.SaveAssets();
+        return $"{SizeName(size)} m{(fromPrefab ? " (visual from the prefab" + (resized ? ", resized by an instance override)" : ")") : "")}";
+    }
 
-        Selection.activeGameObject = visual;
-        EditorGUIUtility.PingObject(visual);
-        Debug.Log($"Build Test Crate: finished on {CratePath}, {mesh.triangles.Length / 3} triangles, " +
-                  $"mesh bounds {mesh.bounds.size} for a crate of {size}.");
+    static bool UsesOldMaterial(Renderer renderer) => renderer.sharedMaterials.Contains(oldMaterial);
+
+    static bool IsBuiltInCube(Mesh mesh) =>
+        mesh != null && mesh.name == "Cube" && AssetDatabase.GetAssetPath(mesh) == "Library/unity default resources";
+
+    static string PathOf(Transform t) => t.parent == null ? t.name : PathOf(t.parent) + "/" + t.name;
+
+    static Vector3 Round(Vector3 v, float steps) =>
+        new Vector3(Mathf.Round(v.x * steps) / steps, Mathf.Round(v.y * steps) / steps, Mathf.Round(v.z * steps) / steps);
+
+    static Vector3 Abs(Vector3 v) => new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
+
+    static string SizeName(Vector3 size) =>
+        string.Join("x", new[] { size.x, size.y, size.z }.Select(f => f.ToString("0.###", CultureInfo.InvariantCulture)));
+
+    static string MeshPath(Vector3 size) => $"{ArtFolder}/{MeshPrefix}_{SizeName(size)}.asset";
+
+    // --- Art ---
+
+    static void PrepareArt()
+    {
+        if (!AssetDatabase.IsValidFolder("Assets/Art")) AssetDatabase.CreateFolder("Assets", "Art");
+        if (!AssetDatabase.IsValidFolder(ArtFolder)) AssetDatabase.CreateFolder("Assets/Art", "Crate");
+
+        if (AssetDatabase.LoadAssetAtPath<Texture2D>(AlbedoPath) == null || AssetDatabase.LoadAssetAtPath<Texture2D>(NormalPath) == null)
+            MakeWoodTextures();
+        materials = new[] { WoodMaterial(), FrameMaterial(), IronMaterial() };
+
+        // The trial's mesh is the 1.5 m crate's: rename it rather than leave it behind.
+        string trialTarget = MeshPath(new Vector3(1.5f, 1.5f, 1.5f));
+        if (AssetDatabase.LoadAssetAtPath<Mesh>(TrialMeshPath) != null && AssetDatabase.LoadAssetAtPath<Mesh>(trialTarget) == null)
+        {
+            string error = AssetDatabase.MoveAsset(TrialMeshPath, trialTarget);
+            if (!string.IsNullOrEmpty(error)) Debug.LogWarning($"Build Wooden Crates: could not rename {TrialMeshPath}: {error}");
+        }
+    }
+
+    /// <summary>The mesh for a crate of this size, built once a run and saved over last run's.</summary>
+    static Mesh MeshFor(Vector3 size)
+    {
+        string path = MeshPath(size);
+        if (MeshesBySize.TryGetValue(path, out Mesh mesh)) return mesh;
+        mesh = BuildMesh(size / 2f).Save(path, Path.GetFileNameWithoutExtension(path));
+        MeshesBySize[path] = mesh;
+        return mesh;
+    }
+
+    /// <summary>Deletes crate meshes that no crate uses any more, such as the trial's or a size that has gone.</summary>
+    static void RemoveUnusedMeshes(Report report)
+    {
+        foreach (string guid in AssetDatabase.FindAssets("t:Mesh", new[] { ArtFolder }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!Path.GetFileName(path).StartsWith(MeshPrefix)) continue;
+            if (MeshesBySize.ContainsKey(path))
+            {
+                var mesh = MeshesBySize[path];
+                report.Meshes.Add($"{path}: {mesh.triangles.Length / 3} triangles, bounds {mesh.bounds.size.ToString("F3")}");
+            }
+            else if (AssetDatabase.DeleteAsset(path))
+            {
+                report.Meshes.Add($"{path}: deleted, no crate uses it");
+            }
+        }
     }
 
     // --- Crate mesh ---
@@ -146,9 +417,11 @@ public static class TestCrateBuilder
     static int Rank(int axis) => axis == X ? 2 : axis == Z ? 1 : 0;
     static bool Outranks(int a, int b) => Rank(a) > Rank(b);
 
-    static Mesh BuildMesh(Vector3 h)
+    /// <param name="h">Half the crate's size, in metres.</param>
+    static CrateMesh BuildMesh(Vector3 h)
     {
         var mesh = new CrateMesh();
+        // The same seed for every size, so the 1.5 m crate is exactly the approved trial crate.
         var rng = new Random(26);
 
         foreach (int s in Sides)
@@ -164,7 +437,7 @@ public static class TestCrateBuilder
         mesh.Block(lo, hi, X, Y, -1, 0f, WoodSubmesh, rng);
 
         AddCornerIron(mesh, h);
-        return mesh.Save(MeshPath, VisualName);
+        return mesh;
     }
 
     /// <summary>One face: planks, a frame of two corner boards and two rails over them, and a diagonal brace on the sides.</summary>
@@ -312,8 +585,10 @@ public static class TestCrateBuilder
             var wood = grain
                 ? new Vector2((float)rng.NextDouble(), (float)rng.NextDouble() * Mathf.Max(0f, TextureLength - length))
                 : Vector2.zero;
+            // A board longer than the texture gets it squeezed along the grain to fit, rather than run off its end.
+            float squeeze = length > TextureLength ? TextureLength / length : 1f;
             Vector3 At(Vector2 p, float z) => centre + across * p.x + outward * p.y + along * z;
-            Vector2 Uv(float u, float v) => grain ? new Vector2(u / TextureWidth + wood.x, (v + wood.y) / TextureLength) : Vector2.zero;
+            Vector2 Uv(float u, float v) => grain ? new Vector2(u / TextureWidth + wood.x, (v * squeeze + wood.y) / TextureLength) : Vector2.zero;
 
             // Long faces: the texture wraps round the board, with the grain along it.
             float perimeter = 0f;
@@ -378,42 +653,42 @@ public static class TestCrateBuilder
         }
     }
 
-    // --- Materials ---
+    // --- Materials (made only if missing, so changes made to them by hand are kept) ---
 
-    static Material MakeWoodMaterial()
+    static Material WoodMaterial()
     {
-        var material = NewMaterial("Crate_Wood");
-        material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AlbedoPath));
-        material.SetColor("_BaseColor", Color.white);
-        SetNormalMap(material);
-        material.SetFloat("_Metallic", 0f);
-        material.SetFloat("_Smoothness", 0.15f);
-        EditorUtility.SetDirty(material);
-        return material;
+        return LoadOrMake("Crate_Wood", material =>
+        {
+            material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AlbedoPath));
+            material.SetColor("_BaseColor", Color.white);
+            SetNormalMap(material);
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", 0.15f);
+        });
     }
 
     // The same wood, darker and greyer, so the frame stands out from the planks by value alone once the volume has
     // taken most of the colour out.
-    static Material MakeFrameMaterial()
+    static Material FrameMaterial()
     {
-        var material = NewMaterial("Crate_Frame");
-        material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AlbedoPath));
-        material.SetColor("_BaseColor", new Color(0.56f, 0.5f, 0.44f));
-        SetNormalMap(material);
-        material.SetFloat("_Metallic", 0f);
-        material.SetFloat("_Smoothness", 0.12f);
-        EditorUtility.SetDirty(material);
-        return material;
+        return LoadOrMake("Crate_Frame", material =>
+        {
+            material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AlbedoPath));
+            material.SetColor("_BaseColor", new Color(0.56f, 0.5f, 0.44f));
+            SetNormalMap(material);
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", 0.12f);
+        });
     }
 
-    static Material MakeIronMaterial()
+    static Material IronMaterial()
     {
-        var material = NewMaterial("Crate_Iron");
-        material.SetColor("_BaseColor", new Color(0.1f, 0.09f, 0.08f));
-        material.SetFloat("_Metallic", 0.6f);
-        material.SetFloat("_Smoothness", 0.32f);
-        EditorUtility.SetDirty(material);
-        return material;
+        return LoadOrMake("Crate_Iron", material =>
+        {
+            material.SetColor("_BaseColor", new Color(0.1f, 0.09f, 0.08f));
+            material.SetFloat("_Metallic", 0.6f);
+            material.SetFloat("_Smoothness", 0.32f);
+        });
     }
 
     static void SetNormalMap(Material material)
@@ -423,18 +698,19 @@ public static class TestCrateBuilder
         material.EnableKeyword("_NORMALMAP");
     }
 
-    static Material NewMaterial(string name)
+    static Material LoadOrMake(string name, Action<Material> setUp)
     {
         string path = $"{ArtFolder}/{name}.mat";
         var material = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (material != null) return material;
 
         material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        setUp(material);
         AssetDatabase.CreateAsset(material, path);
         return material;
     }
 
-    // --- Wood texture ---
+    // --- Wood texture (made only if missing; the same as the trial's) ---
 
     struct Knot { public float U, Y, Radius; }
     struct Crack { public float U, Y0, Y1, Width; }
