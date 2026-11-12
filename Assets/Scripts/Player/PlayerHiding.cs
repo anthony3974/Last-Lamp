@@ -27,6 +27,9 @@ namespace LastLamp
                 return;
             }
 
+            // A catch while hidden puts the player back at a checkpoint without leaving the spot the usual way.
+            if (occupied != null) Release();
+
             HidingSpot spot = HidingSpot.NearestInReach(transform.position);
             SpotInReach = spot != null;
 
@@ -36,12 +39,19 @@ namespace LastLamp
         void Enter(HidingSpot spot)
         {
             occupied = spot;
+            occupied.SetOccupied(true);
             player.EnterHiding(spot.HidePosition);
         }
 
         void Leave()
         {
             player.LeaveHiding(occupied.ExitPosition);
+            Release();
+        }
+
+        void Release()
+        {
+            occupied.SetOccupied(false);
             occupied = null;
         }
     }

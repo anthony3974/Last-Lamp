@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace LastLamp
 {
@@ -14,11 +15,41 @@ namespace LastLamp
         [Tooltip("How close the player must be to use this spot, along the ground, in metres.")]
         [SerializeField] float reach = 1.8f;
 
+        Renderer[] renderers;
+        ShadowCastingMode[] normalShadows;
+
         public Vector3 HidePosition => transform.position;
         public Vector3 ExitPosition => exitPoint.position;
 
         void OnEnable() => Active.Add(this);
-        void OnDisable() => Active.Remove(this);
+
+        void OnDisable()
+        {
+            Active.Remove(this);
+            SetOccupied(false);
+        }
+
+        /// <summary>
+        /// While the player is inside, the spot draws only its shadow, so the follow camera, which can end up inside
+        /// or behind it, sees the room instead of the inside of the crate. Monsters don't use rendering, so this
+        /// changes nothing for them.
+        /// </summary>
+        public void SetOccupied(bool occupied)
+        {
+            if (renderers == null)
+            {
+                if (!occupied) return;
+                renderers = GetComponentsInChildren<Renderer>(true);
+                normalShadows = new ShadowCastingMode[renderers.Length];
+                for (int i = 0; i < renderers.Length; i++) normalShadows[i] = renderers[i].shadowCastingMode;
+            }
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null) continue;
+                renderers[i].shadowCastingMode = occupied ? ShadowCastingMode.ShadowsOnly : normalShadows[i];
+            }
+        }
 
         /// <returns>The closest spot the point can reach, or null if there is none.</returns>
         public static HidingSpot NearestInReach(Vector3 point)
