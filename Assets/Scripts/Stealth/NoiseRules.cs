@@ -16,8 +16,10 @@ namespace LastLamp
             return sprinting ? SprintRadius : WalkRadius;
         }
 
-        public static float Landing(bool crouching)
+        /// <summary>Landing inside a lamp pool is silent to enemies, so a pool stays safe to jump in.</summary>
+        public static float Landing(bool crouching, bool inLamp = false)
         {
+            if (inLamp) return 0f;
             return crouching ? LandingRadius * CrouchedLandingMultiplier : LandingRadius;
         }
     }

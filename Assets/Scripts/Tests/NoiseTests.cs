@@ -29,6 +29,13 @@ namespace LastLamp.Tests
         }
 
         [Test]
+        public void LandingInALampPoolIsSilentToEnemies()
+        {
+            Assert.That(NoiseRules.Landing(false, true), Is.EqualTo(0f));
+            Assert.That(NoiseRules.Landing(true, true), Is.EqualTo(0f));
+        }
+
+        [Test]
         public void EmitPublishesPositionAndRadius()
         {
             var heard = Listen(() => Noise.Emit(new Vector3(1f, 2f, 3f), 6f));

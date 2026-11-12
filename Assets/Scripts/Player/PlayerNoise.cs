@@ -75,7 +75,8 @@ namespace LastLamp
 
         void OnLanded()
         {
-            Noise.Emit(transform.position, NoiseRules.Landing(player.IsCrouching));
+            bool inLamp = LampZone.AnyContains(transform.position);
+            Noise.Emit(transform.position, NoiseRules.Landing(player.IsCrouching, inLamp));
             Play(landing, player.IsCrouching ? crouchedLandingVolume : landingVolume);
         }
 
