@@ -134,6 +134,22 @@ Each part's triangle budget is in `PARTS` in `game.py`. The Unity import (Humano
   - The Avatar's T-pose now has the spine straight up, because the mutant clips are already hunched and would otherwise add their lean to the modelled one. The neck and head keep their modelled angle to the chest.
   - The agent radius is 0.55 m in the NavMesh settings and on every monster, and `LampZone` widens each `Lit` area by 0.55 m instead of 0.45 m, so the arms stay out of the light. The tool rebakes both levels and warns in the Console if any patrol route no longer joins up outside the light. The warehouse catwalks are 1.5 m wide, which leaves the agent a strip about 0.4 m wide.
 
+### Later (not soon)
+- [ ] **29. One world from several scenes (owner, 2026-11-11, distant).** Build each new area, such as the building next to the warehouse that the player jumps onto from the window, in its own scene, laid out in the warehouse's world coordinates so they line up. Two ways to join areas, decide per chapter:
+  - **Load the next scene as a new level**, as the corridor does into the warehouse today (freeze on the finished message, then load). This already works and needs nothing new.
+  - **Load scenes alongside each other (additive loading)**, so they play as one world and the player walks from one into the next with no break. The next area loads in the background before it can be seen, and areas far behind unload out of sight. An area seen from far away gets a simple stand-in in the scene it's seen from. This needs:
+    - The player, camera and HUD in one main scene that stays loaded the whole time (today each level has its own copy).
+    - Monsters that find the player when the game starts instead of a direct link, because Unity doesn't allow links between scenes.
+    - Each area's NavMesh comes in with its scene; monsters stay in their own area unless the meshes are connected at the doorway.
+    - One scene sets the sky and lighting settings for everything loaded, so all areas share the same night.
+
+  Why separate scenes (2026-11-11):
+  - The warehouse can't get damaged. Every building is made by a tool that rebuilds its objects; in the warehouse scene, a mistake in a new tool, or a rerun of `WarehouseBuilder`, could wipe or move hand-made work (the highlights, the green back door, the front door, the moved checkpoint). In its own scene, its tool can only touch the new building.
+  - Its own NavMesh: the new building's monster paths can be rebaked without rebaking the warehouse, so checked patrol routes stay as they are.
+  - Cleaner history: each commit changes only one building, so mistakes are easy to spot and undo.
+
+  None of the additive work is needed until a chapter gets too big for one scene or a seamless crossing is wanted. *Check: the player walks from the warehouse into the next area with no pause or visible switch, and monsters in both areas work.*
+
 ### Decisions
 - **The human (owner, 2026-11-09).** A noir man in a top hat with a dark red band, sitting just above the brows; a belted double-breasted trench coat to the knee; white shirt, striped tie, leather gloves, matte dress shoes; dark hair down to the collar at the back. The body and face come from MPFB and the animation from Mixamo; everything else is scripted. Don't use the `game-human` or `game-human-advanced` worktrees as references for this version.
 - **The Wick (owner, 2026-11-09).** The realistic monster is a starved, hunched creature burned by light: wet ashen skin, with hands, forearms and feet charred black. It is 1.95 m tall with its eyes at 1.7 m, matching the height `Enemy` sees from. Its long arms hang almost to the shins to suit the 1.4 m catch reach. A glowing seam down the breastbone and glands down the spine replace the sphere above the head as the warning cue, so it reads from the front and the back.
