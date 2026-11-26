@@ -109,19 +109,19 @@ namespace LastLamp
         {
             Active.Add(this);
             Noise.Emitted += Hear;
-            lives.Caught += OnPlayerCaught;
+            lives.SentBack += StartOver;
         }
 
         void OnDisable()
         {
             Active.Remove(this);
             Noise.Emitted -= Hear;
-            lives.Caught -= OnPlayerCaught;
+            lives.SentBack -= StartOver;
         }
 
-        // Every catch sends the player back to a checkpoint, so every monster starts over too:
-        // back where it stood when the level began, at the start of its route, with no memory of the player.
-        void OnPlayerCaught(bool outOfLives)
+        // Every catch, and every restart from the pause menu, sends the player back to a checkpoint, so every monster
+        // starts over too: back where it stood when the level began, at the start of its route, with no memory of the player.
+        void StartOver()
         {
             brain.Reset();
             heardNoise = false;
@@ -182,6 +182,9 @@ namespace LastLamp
 
         void Update()
         {
+            // Time is frozen (paused, a level's end, or a level loading): no thinking, so no catch, sound or new state.
+            if (Time.deltaTime <= 0f) return;
+
             EnemyState before = brain.State;
             brain.Tick(ReadSenses(), Time.deltaTime);
             heardNoise = false;

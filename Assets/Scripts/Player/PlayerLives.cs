@@ -7,6 +7,7 @@ namespace LastLamp
     /// <summary>
     /// Being caught costs a life and returns the player to their last checkpoint.
     /// Running out of lives refills them and sends the player back to the level's first checkpoint.
+    /// The pause menu can also send the player back to their last checkpoint, without costing a life.
     /// The level sets its first checkpoint when it loads (<see cref="StartLevel"/>).
     /// </summary>
     [RequireComponent(typeof(PlayerController))]
@@ -21,6 +22,9 @@ namespace LastLamp
 
         /// <summary>Raised after each catch. True means that catch used up the last life.</summary>
         public event Action<bool> Caught;
+
+        /// <summary>Raised each time the player is sent back to a checkpoint: after a catch, or a restart from the pause menu.</summary>
+        public event Action SentBack;
 
         /// <summary>Raised the first time the player reaches each checkpoint, not counting the first one.</summary>
         public event Action<Checkpoint> CheckpointReached;
@@ -74,10 +78,19 @@ namespace LastLamp
                 current = firstCheckpoint;
             }
 
+            SendBack();
+            Caught?.Invoke(outOfLives);
+        }
+
+        /// <summary>The pause menu's Restart from checkpoint: back to the last checkpoint, as after a catch, but free.</summary>
+        public void RestartFromCheckpoint() => SendBack();
+
+        void SendBack()
+        {
             // In a joined world, the area that held the checkpoint may have unloaded behind the player.
             if (current == null) current = firstCheckpoint;
             if (current != null) player.Respawn(current.Position);
-            Caught?.Invoke(outOfLives);
+            SentBack?.Invoke();
         }
     }
 }

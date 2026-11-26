@@ -27,6 +27,7 @@ Working so far:
 - A dim flashlight that points where you look. Holding F makes it brighter, but makes you easier to spot.
 - Doors you can open and close. A shut door blocks a monster's view, and monsters never follow you out of the warehouse.
 - Getting caught: lives, checkpoints, one punch and one dodge.
+- A pause menu (Esc): Resume, Restart from checkpoint and Quit, with the mouse or the keyboard. Everything stops while paused.
 
 See [PLAN.md](PLAN.md) for what's next.
 
@@ -43,6 +44,7 @@ See [PLAN.md](PLAN.md) for what's next.
 | Hide, leave hiding spot, open or close a door, restart | E |
 | Punch | Left mouse |
 | Dodge | Right mouse |
+| Pause menu (Esc again resumes) | Esc |
 
 Controller buttons are placeholders and haven't been tested.
 
@@ -51,7 +53,7 @@ Controller buttons are placeholders and haven't been tested.
 1. Install Unity 6000.0.85f1 through Unity Hub.
 2. Clone this repository.
 3. In Unity Hub, choose **Add project from disk** and select the cloned folder.
-4. Open `Assets/Scenes/Main` and press **Play** to play from the start. Press **Esc** to free the mouse.
+4. Open `Assets/Scenes/Main` and press **Play** to play from the start. Press **Esc** to pause, which also frees the mouse.
 
 Pressing **Play** with a level open, such as `Corridor_01` or `Warehouse_01`, starts the game in that level. On its own, a level has no camera, moonlight or colour grading; to edit it with the game's look, also open `Main` (right-click it > **Open Scene Additive**).
 

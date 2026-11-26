@@ -120,17 +120,20 @@ namespace LastLamp
             yaw = transform.eulerAngles.y;
         }
 
-        void OnEnable()
-        {
-            map.Enable();
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
+        void OnEnable() => SetControls(true);
 
-        void OnDisable()
+        void OnDisable() => SetControls(false);
+
+        /// <summary>
+        /// Turns the player's controls on or off. While they are off, as in the pause menu, nothing reads a key or the
+        /// mouse (not even the camera or Interact), and the cursor is free.
+        /// </summary>
+        public void SetControls(bool on)
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            if (on) map.Enable();
+            else map.Disable();
+            Cursor.lockState = on ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !on;
         }
 
         void OnDestroy()
