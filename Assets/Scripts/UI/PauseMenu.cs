@@ -1,15 +1,12 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace LastLamp
 {
     /// <summary>
-    /// Esc pauses the game and opens the menu: Resume, Restart from checkpoint and Quit. Esc again resumes.
+    /// Esc pauses the game and opens the menu: Resume, Restart from checkpoint and Quit to the title screen. Esc again
+    /// resumes.
     ///
     /// While paused, time stands still (monsters, their catch timers, doors, animation), every sound is held where it
     /// was, and the player's controls are off, so the mouse is free for the menu. Each button's On Click, set in the
@@ -30,13 +27,14 @@ namespace LastLamp
         [SerializeField] Selectable firstButton;
 
         InputAction pause;
-        GameObject lastSelected;
+        MenuFocus focus;
 
         public static bool IsPaused { get; private set; }
 
         void Awake()
         {
             pause = actions.FindAction(PauseAction, true);
+            focus = new MenuFocus(firstButton);
             panel.SetActive(false);
         }
 
@@ -57,11 +55,16 @@ namespace LastLamp
                 else if (CanPause()) Pause();
             }
 
-            if (IsPaused) KeepSelection();
+            if (IsPaused) focus.Keep();
         }
 
-        // Not while time is already frozen, by a level's end or a new level loading: those unfreeze it themselves.
-        static bool CanPause() => Time.timeScale > 0f && (LevelLoader.Current == null || !LevelLoader.Current.IsSwitching);
+        // Not while time is already frozen, by a level's end or a new level loading: those unfreeze it themselves. Not on
+        // the title screen either, which is a menu already.
+        static bool CanPause()
+        {
+            LevelLoader loader = LevelLoader.Current;
+            return Time.timeScale > 0f && (loader == null || (!loader.IsSwitching && !loader.OnTitle));
+        }
 
         public void Pause()
         {
@@ -72,16 +75,14 @@ namespace LastLamp
             AudioListener.pause = true;
             player.SetControls(false);
             panel.SetActive(true);
-            Select(firstButton.gameObject);
+            focus.SelectFirst();
         }
 
         public void Resume()
         {
             if (!IsPaused) return;
 
-            Unfreeze();
-            panel.SetActive(false);
-            Select(null);
+            Close();
             player.SetControls(true);
         }
 
@@ -92,13 +93,20 @@ namespace LastLamp
             lives.RestartFromCheckpoint();
         }
 
+        /// <summary>Back to the title screen. The controls stay off: the title screen is a menu.</summary>
         public void Quit()
         {
-#if UNITY_EDITOR
-            EditorApplication.ExitPlaymode();
-#else
-            Application.Quit();
-#endif
+            if (!IsPaused || LevelLoader.Current == null) return;
+
+            Close();
+            LevelLoader.Current.ShowTitle();
+        }
+
+        void Close()
+        {
+            Unfreeze();
+            panel.SetActive(false);
+            focus.Select(null);
         }
 
         void Unfreeze()
@@ -106,24 +114,6 @@ namespace LastLamp
             IsPaused = false;
             Time.timeScale = 1f;
             AudioListener.pause = false;
-        }
-
-        // Clicking the dark around the buttons drops the selection, which would leave the keyboard with nothing to move
-        // from, so the last button picked comes back.
-        void KeepSelection()
-        {
-            EventSystem events = EventSystem.current;
-            if (events == null) return;
-
-            GameObject selected = events.currentSelectedGameObject;
-            if (selected != null && selected.activeInHierarchy) lastSelected = selected;
-            else Select(lastSelected != null ? lastSelected : firstButton.gameObject);
-        }
-
-        void Select(GameObject button)
-        {
-            lastSelected = button;
-            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(button);
         }
     }
 }

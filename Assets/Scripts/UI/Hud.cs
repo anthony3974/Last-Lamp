@@ -16,6 +16,8 @@ namespace LastLamp
         [SerializeField] Text tutorialLabel;
         [Tooltip("A black panel over the whole screen. Its Canvas Group fades it in while a new level loads.")]
         [SerializeField] CanvasGroup fade;
+        [Tooltip("The parts shown only while playing, such as the lives and the exposure bar. They hide on the title screen.")]
+        [SerializeField] GameObject[] playOnly;
 
         public GameObject TutorialPanel => tutorialPanel;
         public Text TutorialLabel => tutorialLabel;
@@ -36,5 +38,14 @@ namespace LastLamp
         }
 
         public void HideFinished() => finishedMessage.gameObject.SetActive(false);
+
+        /// <summary>Shows the parts of the HUD that belong to play, or hides them for the title screen.</summary>
+        public void ShowPlay(bool show)
+        {
+            foreach (GameObject part in playOnly)
+            {
+                if (part != null) part.SetActive(show);
+            }
+        }
     }
 }

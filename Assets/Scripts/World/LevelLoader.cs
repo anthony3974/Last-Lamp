@@ -16,8 +16,11 @@ namespace LastLamp
     /// light and sky. Each level is a scene of its own (see <see cref="Level"/>), loaded in the background alongside Main,
     /// so a level can be edited without any risk to the others.
     ///
-    /// A new level (the game starting, the corridor's end, a restart) replaces every loaded level behind a fade to black,
-    /// with the player on its start and fresh lives.
+    /// The game opens on the title screen: the Title scene's backdrop, loaded like a level with the player standing on
+    /// its start, under the <see cref="TitleMenu"/>. While it is up, the player's controls and the HUD's play parts are off.
+    ///
+    /// A new level (New Game, the corridor's end, a restart) replaces every loaded level behind a fade to black, with the
+    /// player on its start and fresh lives.
     ///
     /// Areas joined into one world stream instead: standing in an <see cref="AreaLink"/> loads the area on the other
     /// side in the background, and an area the player has left unloads once they are out of every link to it. At most
@@ -35,9 +38,12 @@ namespace LastLamp
         [SerializeField] PlayerLives lives;
         [SerializeField] CinemachineCamera followCamera;
         [SerializeField] Hud hud;
+        [SerializeField] TitleMenu titleMenu;
 
         [Header("Levels")]
-        [Tooltip("The level the game starts in, by scene name. It must be in the build list.")]
+        [Tooltip("The title screen's backdrop, by scene name. The game opens on it. It must be in the build list.")]
+        [SerializeField] string titleScene = "Title";
+        [Tooltip("The level New Game starts in, by scene name. It must be in the build list.")]
         [SerializeField] string firstLevel = "Corridor_01";
         [Tooltip("How long the screen takes to fade to black, or back, when a new level loads, in real seconds.")]
         [SerializeField] float fadeSeconds = 0.4f;
@@ -59,6 +65,9 @@ namespace LastLamp
         /// <summary>True while a new level is replacing the old one, behind the fade.</summary>
         public bool IsSwitching => switching;
 
+        /// <summary>True while the title screen is up, or the screen is fading out of it.</summary>
+        public bool OnTitle { get; private set; }
+
         void Awake()
         {
             Current = this;
@@ -79,15 +88,21 @@ namespace LastLamp
         {
             var levels = new List<string>();
 #if UNITY_EDITOR
-            // Pressing Play with a level open starts in that level (the active one first), as if it were the first.
+            // Pressing Play with a level open starts in that level (the active one first), skipping the title screen.
             foreach (string path in SessionState.GetString(EditorLevelsKey, "").Split(';'))
             {
                 if (path.Length > 0) levels.Add(path);
             }
 #endif
-            if (levels.Count == 0) levels.Add(firstLevel);
+            if (levels.Count == 0) levels.Add(titleScene);
             StartCoroutine(SwitchTo(levels));
         }
+
+        /// <summary>From the title screen: the first level, with fresh lives.</summary>
+        public void StartNewGame() => LoadLevel(firstLevel);
+
+        /// <summary>Leaves the level for the title screen, behind the fade.</summary>
+        public void ShowTitle() => LoadLevel(titleScene);
 
         /// <summary>
         /// Replaces every loaded level with this one, behind a fade to black, and starts the player on it with fresh lives.
@@ -105,6 +120,11 @@ namespace LastLamp
             Time.timeScale = 0f;
             yield return Fade(1f);
             hud.HideFinished();
+
+            OnTitle = SceneName(levels[0]) == titleScene;
+            titleMenu.Show(OnTitle);
+            hud.ShowPlay(!OnTitle);
+            player.SetControls(!OnTitle);
 
             ThreadPriority priority = Application.backgroundLoadingPriority;
             Application.backgroundLoadingPriority = ThreadPriority.High;

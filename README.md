@@ -16,7 +16,7 @@ The `Main` scene holds everything the levels share: the player, the camera, the 
 - `Warehouse_01`: a two-storey warehouse with four monsters, stairs up to a catwalk, light from skylights and windows, and an old wooden front door you can open, which shuts behind you. The back door is blocked; the way on is out of an upper window.
 - `Rowhouse_01`: the two-storey rowhouse joined to the warehouse's left wall. It loads while you are on the warehouse's upper level, so you jump out of the window onto its roof with no break, then go down through two floors past two monsters to its back door, where the level ends and you can restart at the warehouse.
 
-Play starts in the corridor and carries on into the warehouse, with fresh lives, then into the rowhouse. You can also start in any level.
+The game opens on a title screen: the man under a street lamp, with New Game, Continue (greyed out until saving is in) and Quit. Its backdrop is the `Title` scene, which loads like a level. New Game starts in the corridor and carries on into the warehouse, with fresh lives, then into the rowhouse. You can also start in any level.
 
 Working so far:
 - Third-person player, a realistic human in a long coat: walk, sprint, crouch and jump, with a camera that stays out of walls.
@@ -27,7 +27,7 @@ Working so far:
 - A dim flashlight that points where you look. Holding F makes it brighter, but makes you easier to spot.
 - Doors you can open and close. A shut door blocks a monster's view, and monsters never follow you out of the warehouse.
 - Getting caught: lives, checkpoints, one punch and one dodge.
-- A pause menu (Esc): Resume, Restart from checkpoint and Quit, with the mouse or the keyboard. Everything stops while paused.
+- A title screen and a pause menu (Esc): Resume, Restart from checkpoint and Quit to title, with the mouse or the keyboard. Everything stops while paused.
 
 See [PLAN.md](PLAN.md) for what's next.
 
@@ -53,9 +53,9 @@ Controller buttons are placeholders and haven't been tested.
 1. Install Unity 6000.0.85f1 through Unity Hub.
 2. Clone this repository.
 3. In Unity Hub, choose **Add project from disk** and select the cloned folder.
-4. Open `Assets/Scenes/Main` and press **Play** to play from the start. Press **Esc** to pause, which also frees the mouse.
+4. Open `Assets/Scenes/Main` and press **Play** to open on the title screen, as a build does. Press **Esc** to pause, which also frees the mouse.
 
-Pressing **Play** with a level open, such as `Corridor_01` or `Warehouse_01`, starts the game in that level. On its own, a level has no camera, moonlight or colour grading; to edit it with the game's look, also open `Main` (right-click it > **Open Scene Additive**).
+Pressing **Play** with a level open, such as `Corridor_01` or `Warehouse_01`, starts the game in that level, with no title screen. On its own, a level has no camera, moonlight or colour grading; to edit it with the game's look, also open `Main` (right-click it > **Open Scene Additive**).
 
 On Linux with Intel graphics, launch the editor with `-force-vulkan`: OpenGL draws red noise.
 

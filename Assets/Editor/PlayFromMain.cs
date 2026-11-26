@@ -7,8 +7,8 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Pressing Play with a level open plays it the way the game does: the Main scene loads first, with the player, camera,
 /// HUD and the night's light, then the open level loads alongside it with the player on its start. With several levels
-/// open, all of them load and the player starts in the active one. With Main open on its own, the game starts at the
-/// first level, as a build does. Any other scene plays as usual.
+/// open, all of them load and the player starts in the active one, with no title screen. With Main open on its own, the
+/// game opens on the title screen, as a build does. Any other scene plays as usual.
 /// Unity plays the scenes as saved, so it asks to save open changes first.
 /// </summary>
 [InitializeOnLoad]
