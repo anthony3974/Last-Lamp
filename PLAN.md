@@ -67,12 +67,12 @@ Each part's triangle budget is in `PARTS` in `game.py`. The Unity import (Humano
 - **Flashlight (owner, 2026-11-09).** The player carries a small dim flashlight that points where they look. It is for seeing by and doesn't change exposure.
 - **Bright flashlight (owner, 2026-11-10).** Holding F makes the flashlight brighter and further reaching, but adds 0.5 exposure, even inside a lamp pool, so enemies notice the player faster. It goes out while hiding.
 - **Street car (owner, 2026-11-10).** The real `Car.prefab` (from `game-car`) replaces the graybox car on the street outside `Warehouse_01`. It is a static prop: one box collider, all parts on the `VisionBlocker` layer, no driving. It sits outside the baked NavMesh volume, so no rebake is needed.
+- **No dodge-and-counter (owner, 2026-11-26).** Combat stays as it is: one punch and one dodge, as the backup when stealth fails.
 - **Keyboard and mouse only (owner, 2026-11-26).** No gamepad support; it won't be tested or designed for.
 - **PC first (owner, 2026-11-08).** Mobile is secondary and may never ship. If it comes back, it needs touch controls and a new lighting pass, because the Mobile profile has lamp shadows off. Baking the lamps is the likely fix, but baked lamps can't go out and characters don't throw shadows from them.
 
 ### Not in this list
 - **Bosses**, after the story (tasks 36–37), which decides who or what a boss is. Whether every boss can be sneaked past is still open.
-- **Dodge-and-counter combat:** maybe; the owner is weighing it (2026-11-26).
 - **Calmer stealth path:** maybe; it depends on the story.
 - Final art, and anything for mobile.
 
@@ -95,7 +95,7 @@ Each part's triangle budget is in `PARTS` in `game.py`. The Unity import (Humano
 **Mechanics:**
 - Pools of light are safe zones, dark stretches are risky.
 - Enemies fear light and won't enter it unless they are already chasing the player. They hunt the dark with simple vision and hearing.
-- Combat starts tiny: one punch, one dodge, one enemy type. It can grow into an Arkham-style dodge and counter later.
+- Combat starts tiny: one punch, one dodge, one enemy type. It stays that small (owner, 2026-11-26).
 
 **Why it's feasible:**
 - Unity's lighting suits noir.
