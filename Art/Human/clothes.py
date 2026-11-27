@@ -61,7 +61,7 @@ def arm_weight(obj):
 
 
 # Sleeve radius before ease, in metres: below the shoulder, at the elbow and at the cuff.
-SLEEVE_RADII = (0.05, 0.0465, 0.038)
+SLEEVE_RADII = (0.059, 0.054, 0.039)
 
 
 def shape_sleeve(fit, side, sign, co, arm):
@@ -84,21 +84,11 @@ def shape_sleeve(fit, side, sign, co, arm):
     offset = co - centre
     radius = np.linalg.norm(offset, axis=1)
 
-    this_side = (co[:, 0] * sign > 0) & (arm > 0.5)
     total = upper_length + fore_length
-    edges = np.linspace(0.0, total, 19)
-    middles = (edges[:-1] + edges[1:]) / 2
-    measured = np.array([
-        radius[this_side & (along >= low) & (along < high)].mean() if (this_side & (along >= low) & (along < high)).any() else np.nan
-        for low, high in zip(edges[:-1], edges[1:])
-    ])
-    known = ~np.isnan(measured)
-    measured = np.interp(middles, middles[known], measured[known])
-    measured = np.convolve(np.pad(measured, 2, mode="edge"), np.ones(5) / 5, mode="valid")
-
     near_shoulder, at_elbow, at_cuff = SLEEVE_RADII
     target = np.interp(along, [0.0, 0.09, upper_length, total], [near_shoulder, near_shoulder, at_elbow, at_cuff])
-    scale = target / np.interp(along, middles, measured)
+    # Each point is moved to the target on its own, so no narrow spot of the arm shows through.
+    scale = target / np.maximum(radius, 0.01)
     amount = np.clip(arm, 0.0, 1.0) * smoothstep(0.0, 0.07, along) * (co[:, 0] * sign > 0)
     return centre + offset * (1.0 + (scale - 1.0) * amount)[:, None]
 
@@ -194,7 +184,7 @@ def add_upper_folds(fit, obj):
     length = np.linalg.norm(elbow - shoulder) + np.linalg.norm(wrist - elbow)
     near_elbow = np.exp(-((along - np.linalg.norm(elbow - shoulder)) / 0.09) ** 2)
     roll = np.arctan2(mirrored[:, 1] - shoulder[1], mirrored[:, 2] - shoulder[2])
-    for k, amp, twist in ((23, 0.0048, 2.0), (41, 0.0032, -3.0), (67, 0.0016, 3.0)):
+    for k, amp, twist in ((23, 0.0015, 2.0), (41, 0.0025, -3.0), (67, 0.0016, 3.0)):
         sleeve += amp * np.sin(k * along + twist * roll + rng.uniform(0, 6.28))
     sleeve *= (0.25 + 0.75 * near_elbow) * arm * smoothstep(0.03, 0.14, along) * smoothstep(length, length - 0.1, along)
 
